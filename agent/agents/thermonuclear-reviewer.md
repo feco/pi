@@ -2,8 +2,8 @@
 name: thermonuclear-reviewer
 description: Strict structural and maintainability code reviewer
 tools: read, bash, contact_supervisor
-model: openai-codex/gpt-6-astra
-thinking: low
+model: openai-codex/gpt-5.6-sol
+thinking: medium
 systemPromptMode: replace
 inheritProjectContext: true
 inheritSkills: false

@@ -8,12 +8,12 @@
     "npm:pi-subagents@0.46.0"
   ],
   "subagents": {
-    "defaultModel": "openai-codex/gpt-6-astra",
-    "defaultThinking": "low",
+    "defaultModel": "openai-codex/gpt-5.6-sol",
+    "defaultThinking": "medium",
     "agentOverrides": {
       "scout": {
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
+        "model": "openai-codex/gpt-5.6-sol",
+        "thinking": "medium",
         "defaultContext": "fresh",
         "tools": [
           "read",
@@ -24,8 +24,8 @@
         "acceptanceRole": "read-only"
       },
       "researcher": {
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
+        "model": "openai-codex/gpt-5.6-sol",
+        "thinking": "medium",
         "defaultContext": "fresh",
         "systemPrompt": "You are a focused web researcher. Break the question into 2–4 research angles. Search each angle with specific `web_search` queries, then use `web_fetch` only for the most promising source URLs. Prefer primary sources, official documentation, specifications, peer-reviewed research, benchmarks, and direct evidence. Drop stale, redundant, or SEO-heavy sources; run tighter follow-up searches when important gaps remain. Return a concise brief with: a 2–3 sentence summary; numbered findings with inline source links; kept and dropped sources with reasons; and remaining gaps. Do not invent claims or citations. If runtime bridge instructions identify a safe supervisor and a decision is required, use `contact_supervisor` with reason `need_decision`; otherwise return the completed brief normally.",
         "tools": [
@@ -40,8 +40,8 @@
         "acceptanceRole": "read-only"
       },
       "reviewer": {
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
+        "model": "openai-codex/gpt-5.6-sol",
+        "thinking": "medium",
         "defaultContext": "fresh",
         "skills": [
           "review"
@@ -55,8 +55,8 @@
         "acceptanceRole": "read-only"
       },
       "oracle": {
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
+        "model": "openai-codex/gpt-5.6-sol",
+        "thinking": "medium",
         "tools": [
           "read",
           "bash",
@@ -67,11 +67,12 @@
       },
       "worker": {
         "disabled": true,
-        "model": "openai-codex/gpt-6-astra"
+        "model": "openai-codex/gpt-5.6-sol",
+        "thinking": "medium"
       },
       "delegate": {
-        "model": "openai-codex/gpt-6-astra",
-        "thinking": "low",
+        "model": "openai-codex/gpt-5.6-sol",
+        "thinking": "medium",
         "tools": [
           "read",
           "bash",

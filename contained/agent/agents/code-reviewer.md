@@ -2,8 +2,8 @@
 name: code-reviewer
 description: Read-only reviewer for concrete correctness, specification, and repository-standards defects
 tools: read, grep, find, ls, bash, contact_supervisor
-model: openai-codex/gpt-6-astra
-thinking: low
+model: openai-codex/gpt-5.6-sol
+thinking: medium
 systemPromptMode: replace
 inheritProjectContext: true
 inheritSkills: false
