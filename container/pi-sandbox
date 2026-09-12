@@ -1,0 +1,214 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+IMAGE_NAME="pi-sandbox"
+CONFIG_DIR="${PI_CONTAINER_CONFIG:-$SCRIPT_DIR/../contained}"
+SECRETS_DIR="${PI_CONTAINER_SECRETS:-$HOME/.pi-contained-secrets}"
+VOLUME_PREFIX="pi-ws"
+
+GIT_SECRET_FILE=""
+GIT_AUTH_HOST=""
+GIT_AUTH_PATH=""
+GIT_AUTH_USERNAME=""
+
+# ── helpers ──────────────────────────────────────────────
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+volume_name() {
+  local dirname suffix
+  dirname=$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g')
+  suffix="${1:-}"
+  if [ -n "$suffix" ]; then
+    echo "${VOLUME_PREFIX}-${dirname}-${suffix}"
+  else
+    echo "${VOLUME_PREFIX}-${dirname}"
+  fi
+}
+
+build_image() {
+  if docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "Building $IMAGE_NAME image..."
+  docker build -t "$IMAGE_NAME" -f "$SCRIPT_DIR/Dockerfile" "$SCRIPT_DIR"
+}
+
+select_git_credentials() {
+  local remote repo_path username_file
+  remote=$(git remote get-url origin 2>/dev/null || true)
+
+  case "$remote" in
+    https://codeberg.org/*)
+      repo_path=${remote#https://codeberg.org/}
+      ;;
+    https://*@codeberg.org/*)
+      repo_path=${remote#*@codeberg.org/}
+      ;;
+    git@codeberg.org:*)
+      repo_path=${remote#git@codeberg.org:}
+      ;;
+    ssh://git@codeberg.org/*)
+      repo_path=${remote#ssh://git@codeberg.org/}
+      ;;
+    https://github.com/*)
+      repo_path=${remote#https://github.com/}
+      GIT_AUTH_HOST="github.com"
+      ;;
+    https://*@github.com/*)
+      repo_path=${remote#*@github.com/}
+      GIT_AUTH_HOST="github.com"
+      ;;
+    git@github.com:*)
+      repo_path=${remote#git@github.com:}
+      GIT_AUTH_HOST="github.com"
+      ;;
+    ssh://git@github.com/*)
+      repo_path=${remote#ssh://git@github.com/}
+      GIT_AUTH_HOST="github.com"
+      ;;
+    https://dev.azure.com/*|https://*@dev.azure.com/*)
+      GIT_AUTH_HOST="dev.azure.com"
+      GIT_AUTH_PATH=$(printf '%s' "$remote" | sed 's|^https://[^/]*dev\.azure\.com/||; s|\.git$||')
+      GIT_AUTH_USERNAME="pat"
+      GIT_SECRET_FILE="$SECRETS_DIR/azure-devops.token"
+      return
+      ;;
+    git@ssh.dev.azure.com:v3/*)
+      repo_path=${remote#git@ssh.dev.azure.com:v3/}
+      GIT_AUTH_HOST="dev.azure.com"
+      GIT_AUTH_PATH=$(printf '%s' "$repo_path" | sed 's|/\([^/]*\)$|/_git/\1|')
+      GIT_AUTH_USERNAME="pat"
+      GIT_SECRET_FILE="$SECRETS_DIR/azure-devops.token"
+      return
+      ;;
+    *) return ;;
+  esac
+
+  repo_path=${repo_path%.git}
+  if [[ ! "$repo_path" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]]; then
+    echo "WARNING: Unsupported repository path: $repo_path"
+    return
+  fi
+
+  GIT_AUTH_HOST=${GIT_AUTH_HOST:-codeberg.org}
+  GIT_AUTH_PATH="$repo_path"
+  GIT_SECRET_FILE="$SECRETS_DIR/${GIT_AUTH_HOST%%.*}/$repo_path.token"
+  username_file="$SECRETS_DIR/${GIT_AUTH_HOST%%.*}.username"
+  if [ -f "$username_file" ]; then
+    GIT_AUTH_USERNAME=$(head -1 "$username_file" | tr -d '\r\n')
+  else
+    GIT_AUTH_USERNAME=${repo_path%%/*}
+  fi
+}
+
+# ── commands ─────────────────────────────────────────────
+
+cmd_run() {
+  local vol
+  local -a secret_mount=()
+  vol=$(volume_name "${1:-}")
+
+  build_image
+
+  # Create volume and seed it if new
+  if ! docker volume inspect "$vol" >/dev/null 2>&1; then
+    echo "Creating new workspace volume: $vol"
+    docker volume create "$vol"
+    echo "Seeding volume with current directory ($PWD)..."
+    docker run --rm \
+      -v "$vol:/workspace" \
+      -v "$PWD:/src:ro" \
+      alpine:latest \
+      sh -c 'tar -c -C /src \
+        --exclude=node_modules \
+        --exclude=target \
+        --exclude=build \
+        --exclude=dist \
+        --exclude=__pycache__ \
+        --exclude=.venv \
+        --exclude=venv \
+        --exclude=.next \
+        --exclude=coverage \
+        --exclude=.turbo \
+        --exclude=.cache \
+        . | tar -x -C /workspace'
+    echo "Volume seeded."
+  else
+    echo "Resuming existing workspace: $vol"
+  fi
+
+  select_git_credentials
+  if [ -n "$GIT_SECRET_FILE" ]; then
+    if [ -f "$GIT_SECRET_FILE" ]; then
+      secret_mount=(-v "$GIT_SECRET_FILE:/run/secrets/git-token:ro")
+      echo "Git credentials selected for $GIT_AUTH_HOST/$GIT_AUTH_PATH"
+    else
+      echo "WARNING: No Git token found at $GIT_SECRET_FILE"
+    fi
+  fi
+  if [ -f "$CONFIG_DIR/azure-devops.token" ]; then
+    echo "WARNING: Move $CONFIG_DIR/azure-devops.token to $SECRETS_DIR/azure-devops.token"
+    echo "  The old location is inside the globally mounted Pi config."
+  fi
+
+  docker run --rm -it \
+    --name "pi-$(echo "$vol" | tr '_' '-')" \
+    --privileged \
+    -e GIT_AUTH_HOST="$GIT_AUTH_HOST" \
+    -e GIT_AUTH_PATH="$GIT_AUTH_PATH" \
+    -e GIT_AUTH_USERNAME="$GIT_AUTH_USERNAME" \
+    -e OLLAMA_API_KEY="${OLLAMA_API_KEY:-}" \
+    -e BRAVE_SEARCH_API_KEY="${BRAVE_SEARCH_API_KEY:-}" \
+    -v "$vol:/workspace" \
+    -v "$CONFIG_DIR:/root/.pi" \
+    "${secret_mount[@]}" \
+    "$IMAGE_NAME"
+}
+
+cmd_list() {
+  echo "── Workspace volumes ──"
+  docker volume ls --format '{{.Name}}' | grep "^${VOLUME_PREFIX}-" | while read -r v; do
+    printf "  %s\n" "$v"
+  done
+
+  echo ""
+  echo "── Running containers ──"
+  docker ps --filter "ancestor=$IMAGE_NAME" --format '  {{.Names}}  {{.Status}}' 2>/dev/null || true
+}
+
+cmd_rm() {
+  local vol="${1:-}"
+  [ -z "$vol" ] && die "Usage: pi-sandbox rm <volume-name>"
+  [[ "$vol" != ${VOLUME_PREFIX}-* ]] && vol="${VOLUME_PREFIX}-${vol}"
+  docker volume inspect "$vol" >/dev/null 2>&1 || die "Volume '$vol' not found"
+  echo "Deleting volume: $vol"
+  docker volume rm "$vol"
+}
+
+cmd_help() {
+  echo "Usage: pi-sandbox [command] [args]"
+  echo ""
+  echo "Commands:"
+  echo "  (default)     Spin up Pi in an isolated container with a copy of \$PWD"
+  echo "  <suffix>      Append suffix to volume name (for parallel work)"
+  echo "  list          List all sandbox volumes and running containers"
+  echo "  rm <name>     Delete a workspace volume permanently"
+  echo "  build         Rebuild the Docker image"
+  echo ""
+  echo "Config:"
+  echo "  Pi config:    $CONFIG_DIR"
+  echo "  Git secrets:  $SECRETS_DIR"
+  echo "  Image:        $IMAGE_NAME"
+}
+
+# ── dispatch ─────────────────────────────────────────────
+
+case "${1:-}" in
+  list|ls)       cmd_list ;;
+  rm|delete)     shift; cmd_rm "$@" ;;
+  build|rebuild) docker build -t "$IMAGE_NAME" -f "$SCRIPT_DIR/Dockerfile" "$SCRIPT_DIR" ;;
+  help|-h|--help) cmd_help ;;
+  *)             cmd_run "$@" ;;
+esac

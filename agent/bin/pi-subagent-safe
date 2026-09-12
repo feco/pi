@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+agent_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+real_pi="${PI_SUBAGENT_REAL_PI_BINARY:-$(command -v pi)}"
+guards=(
+  "$agent_dir/extensions/block-env-reads.ts"
+  "$agent_dir/extensions/confirm-reads-outside-cwd.ts"
+  "$agent_dir/extensions/confirm-writes.ts"
+)
+
+for guard in "${guards[@]}"; do
+  if [[ ! -r "$guard" ]]; then
+    printf 'Required subagent guard is missing or unreadable: %s\n' "$guard" >&2
+    exit 126
+  fi
+done
+
+exec "$real_pi" \
+  --extension "${guards[0]}" \
+  --extension "${guards[1]}" \
+  --extension "${guards[2]}" \
+  "$@"

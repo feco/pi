@@ -1,0 +1,69 @@
+# ─── Dependencies ──────────────────────────────────────────────
+node_modules/
+jspm_packages/
+
+# ─── Session & Runtime Data ────────────────────────────────────
+.pi-subagents/
+agent/sessions/
+agent/missions/index/
+context-mode/
+agent/run-history.jsonl
+agent/npm/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# ─── Machine-specific / non-portable ───────────────────────────
+# Symlink to the local nvm install of pi-coding-agent.
+# Breaks on any other machine — recreate with `ln -s` after clone.
+agent/extensions/node_modules_pi
+
+# ─── Secrets & Auth ────────────────────────────────────────────
+agent/auth.json
+agent/trust.json
+*.key
+*.pem
+*.p12
+*.pfx
+*.cred
+.env
+.env.local
+.env.*.local
+
+# ─── Binaries ──────────────────────────────────────────────────
+agent/bin/fd
+*.exe
+*.dll
+*.so
+*.dylib
+
+# ─── OS Artifacts ──────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─── Editor / IDE ──────────────────────────────────────────────
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+
+# ─── Build Output ──────────────────────────────────────────────
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# ─── Lock files (config repo — not needed) ─────────────────────
+agent/extensions/package-lock.json
+agent/extensions/bun.lock

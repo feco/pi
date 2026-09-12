@@ -1,0 +1,18 @@
+{
+  "default": "general",
+  "presets": {
+    "general": {
+      "description": "All registered tools except teaching and Goulven Wiki",
+      "excludeTools": ["teach"],
+      "excludeToolPrefixes": ["goulven_"]
+    },
+    "teacher": {
+      "description": "General tools plus teaching and web search/fetch; excludes Goulven Wiki",
+      "excludeToolPrefixes": ["goulven_"]
+    },
+    "wiki": {
+      "description": "General tools plus Goulven Wiki and web search/fetch; excludes teaching",
+      "excludeTools": ["teach"]
+    }
+  }
+}

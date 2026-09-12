@@ -1,0 +1,168 @@
+{
+    "providers": {
+        "ollama-cloud": {
+            "baseUrl": "https://ollama.com/v1",
+            "api": "openai-completions",
+            "apiKey": "$OLLAMA_API_KEY",
+            "authHeader": true,
+            "compat": {
+                "supportsDeveloperRole": false,
+                "supportsReasoningEffort": false,
+                "supportsUsageInStreaming": true,
+                "maxTokensField": "max_tokens"
+            },
+            "models": [
+                {
+                    "id": "qwen3.8",
+                    "name": "Qwen 3.8 27b",
+                    "reasoning": true,
+                    "input": [
+                        "text"
+                    ],
+                    "contextWindow": 120000,
+                    "maxTokens": 32000,
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "compat": {
+                        "supportsReasoningEffort": true
+                    },
+                    "thinkingLevelMap": {
+                        "minimal": null,
+                        "low": "low",
+                        "medium": "medium",
+                        "high": "high",
+                        "xhigh": null
+                    }
+                },
+                {
+                    "id": "glm-5.3",
+                    "name": "GLM 5.3 (Ollama Cloud)",
+                    "reasoning": true,
+                    "input": [
+                        "text"
+                    ],
+                    "contextWindow": 200000,
+                    "maxTokens": 32000,
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "compat": {
+                        "supportsReasoningEffort": true
+                    },
+                    "thinkingLevelMap": {
+                        "off": null,
+                        "minimal": null,
+                        "low": "low",
+                        "medium": null,
+                        "high": "high",
+                        "xhigh": null,
+                        "max": "max"
+                    }
+                },
+                {
+                    "id": "glm-5.3-flash:cloud",
+                    "name": "GLM 5.3 Flash (Ollama Cloud)",
+                    "reasoning": true,
+                    "input": [
+                        "text",
+                        "image"
+                    ],
+                    "contextWindow": 200000,
+                    "maxTokens": 32000,
+                    "cost": {
+                        "input": 0.15,
+                        "output": 0.5,
+                        "cacheRead": 0.03,
+                        "cacheWrite": 0
+                    },
+                    "compat": {
+                        "supportsReasoningEffort": true
+                    },
+                    "thinkingLevelMap": {
+                        "off": null,
+                        "minimal": null,
+                        "low": "low",
+                        "medium": null,
+                        "high": "high",
+                        "xhigh": null,
+                        "max": "max"
+                    }
+                },
+                {
+                    "id": "deepseek-v4-flash:0731-cloud",
+                    "name": "DeepSeek V4 Flash (Ollama Cloud)",
+                    "reasoning": true,
+                    "input": [
+                        "text"
+                    ],
+                    "contextWindow": 200000,
+                    "maxTokens": 32000,
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "thinkingLevelMap": {
+                        "max": "max"
+                    }
+                },
+                {
+                    "id": "deepseek-v4-pro-cloud",
+                    "name": "DeepSeek V4 Pro (Ollama Cloud)",
+                    "reasoning": true,
+                    "input": [
+                        "text"
+                    ],
+                    "contextWindow": 200000,
+                    "maxTokens": 32000,
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    }
+                }
+            ]
+        },
+        "mlx-local": {
+            "baseUrl": "http://127.0.0.1:9001/v1",
+            "api": "openai-completions",
+            "apiKey": "not-needed",
+            "compat": {
+                "supportsDeveloperRole": false,
+                "supportsReasoningEffort": false,
+                "supportsUsageInStreaming": false,
+                "maxTokensField": "max_tokens",
+                "thinkingFormat": "qwen-chat-template",
+                "cacheControlFormat": "anthropic",
+                "sendSessionAffinityHeaders": true
+            },
+            "models": [
+                {
+                    "id": "mlx-community/Qwen3.6-27B-4bit",
+                    "name": "Qwen3.6-27B (local MLX)",
+                    "reasoning": true,
+                    "input": [
+                        "text"
+                    ],
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 200000,
+                    "maxTokens": 16384
+                }
+            ]
+        }
+    }
+}
