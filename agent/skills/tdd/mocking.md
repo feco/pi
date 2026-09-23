@@ -1,17 +1,13 @@
 # When to Mock
 
-Mock at **system boundaries** only:
+Prefer doubles at **boundaries outside the behavior under test**:
 
 - External APIs (payment, email, etc.)
-- Databases (sometimes - prefer test DB)
+- Databases in unit tests; use a production-compatible test database when testing persistence
 - Time/randomness
-- File system (sometimes)
+- File system when it is not the integration under test
 
-Don't mock:
-
-- Your own classes/modules
-- Internal collaborators
-- Anything you control
+Avoid mocking internal collaborators solely to verify call counts or implementation steps. A module you own can still be replaced when it represents a separate service or expensive boundary outside the test's scope. For integration tests, use the real implementation of the boundary you intend to verify; a mock cannot prove that integration works.
 
 ## Designing for Mockability
 

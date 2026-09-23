@@ -20,11 +20,11 @@ Characteristics:
 - Uses public API only
 - Survives internal refactors
 - Describes WHAT, not HOW
-- One logical assertion per test
+- Assertions check one behavior or scenario; multiple related properties of one result are fine
 
 ## Bad Tests
 
-**Implementation-detail tests**: Coupled to internal structure.
+**Implementation-detail tests**: Coupled to internal structure. Inspect persisted state directly when persistence is itself the behavior under test; otherwise prefer observable behavior through the public interface.
 
 ```typescript
 // BAD: Tests implementation details
@@ -42,17 +42,17 @@ Red flags:
 - Asserting on call counts/order
 - Test breaks when refactoring without behavior change
 - Test name describes HOW not WHAT
-- Verifying through external means instead of interface
+- Inspecting internal state when caller-visible behavior would prove the same thing
 
 ```typescript
-// BAD: Bypasses interface to verify
+// BAD when the goal is user retrievability: bypasses the retrieval interface
 test("createUser saves to database", async () => {
   await createUser({ name: "Alice" });
   const row = await db.query("SELECT * FROM users WHERE name = ?", ["Alice"]);
   expect(row).toBeDefined();
 });
 
-// GOOD: Verifies through interface
+// GOOD when the goal is user retrievability: verifies through the interface
 test("createUser makes user retrievable", async () => {
   const user = await createUser({ name: "Alice" });
   const retrieved = await getUser(user.id);

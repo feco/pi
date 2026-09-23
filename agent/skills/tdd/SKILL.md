@@ -17,6 +17,10 @@ When exploring the codebase, discover and read the repository's applicable termi
 
 Tests verify behavior through public interfaces, not implementation details. Code can change entirely; tests shouldn't. A good test reads like a specification — "user can checkout with valid cart" tells you exactly what capability exists — and survives refactors because it doesn't care about internal structure.
 
+Keep tests deterministic, independent of execution order and shared state, and fast enough for their layer. Control time and randomness, and reset or isolate fixtures and test data. Choose scenarios by risk: cover meaningful boundaries, invalid inputs, errors, and failure paths as well as the happy path. Use coverage to find gaps, not to chase a percentage. Structure tests so setup, action, and expected outcome are easy to distinguish.
+
+For integration tests, exercise the real boundary under test (such as the production-compatible database engine or service contract); replace unrelated external systems when that makes the test more focused. Isolate data per test/run and clean it up. Where services communicate, verify their shared contract and exercise critical paths against real implementations as practical. Run the appropriate focused tests during development and the repository's required suite in CI.
+
 See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking guidelines.
 
 ## Seams — where tests go
