@@ -631,6 +631,59 @@ async function resolvesInsideCwd(filePath: string, cwd: string): Promise<boolean
 }
 
 // ---------------------------------------------------------------------------
+// Azure DevOps read classification
+// ---------------------------------------------------------------------------
+
+const AZURE_DEVOPS_READ_TOOLS = new Set([
+	"mcp_azure_devops_core_list_projects",
+	"mcp_azure_devops_core_list_project_teams",
+	"mcp_azure_devops_core_get_identity_ids",
+]);
+
+const AZURE_DEVOPS_READ_ACTIONS = new Map<string, Set<string>>([
+	["mcp_azure_devops_work", new Set([
+		"list_iterations",
+		"list_team_iterations",
+		"get_team_settings",
+		"get_team_capacity",
+		"get_iteration_capacities",
+	])],
+	["mcp_azure_devops_wit_work_item", new Set([
+		"get",
+		"get_batch",
+		"list_comments",
+		"my",
+		"list_revisions",
+		"list_for_iteration",
+		"get_type",
+	])],
+	["mcp_azure_devops_wit_query", new Set(["get", "get_results", "wiql"])],
+	["mcp_azure_devops_wit_backlog", new Set(["list", "list_work_items"])],
+	["mcp_azure_devops_repo_repository", new Set(["get", "list"])],
+	["mcp_azure_devops_repo_pull_request", new Set(["get", "list", "list_by_commits"])],
+	["mcp_azure_devops_repo_pull_request_org", new Set()],
+	["mcp_azure_devops_repo_pull_request_thread", new Set(["list", "list_comments"])],
+	["mcp_azure_devops_repo_branch", new Set(["get", "list", "list_mine"])],
+	["mcp_azure_devops_repo_file", new Set(["get_content", "list_directory"])],
+	["mcp_azure_devops_repo_search_commits", new Set()],
+]);
+
+export function isReadOnlyAzureDevOpsCall(toolName: string, input: unknown): boolean {
+	if (AZURE_DEVOPS_READ_TOOLS.has(toolName)) return true;
+	if (typeof input !== "object" || input === null) return false;
+
+	if (toolName === "mcp_azure_devops_wit_work_item_attachment") {
+		return (input as { savePath?: unknown }).savePath === undefined;
+	}
+
+	const allowedActions = AZURE_DEVOPS_READ_ACTIONS.get(toolName);
+	if (allowedActions === undefined) return false;
+	const action = (input as { action?: unknown }).action;
+	if (allowedActions.size === 0) return action === undefined;
+	return typeof action === "string" && allowedActions.has(action);
+}
+
+// ---------------------------------------------------------------------------
 // Extension entry point
 // ---------------------------------------------------------------------------
 
@@ -648,37 +701,9 @@ export default function (pi: ExtensionAPI) {
 			return undefined;
 		}
 
-		// Allow read-only Azure DevOps MCP tools without confirmation.
-		// Only explicitly listed read tools are whitelisted; any unlisted
-		// mcp_azure_devops_* tool (including future additions) requires confirmation.
-		const AZURE_DEVOPS_READ_TOOLS = new Set([
-			// Core
-			"mcp_azure_devops_core_list_projects",
-			"mcp_azure_devops_core_list_project_teams",
-			"mcp_azure_devops_core_get_identity_ids",
-			// Work Items — read
-			"mcp_azure_devops_wit_get_work_item",
-			"mcp_azure_devops_wit_get_work_items_batch_by_ids",
-			"mcp_azure_devops_wit_my_work_items",
-			"mcp_azure_devops_wit_list_work_item_comments",
-			"mcp_azure_devops_wit_list_work_item_revisions",
-			"mcp_azure_devops_wit_get_work_item_type",
-			"mcp_azure_devops_wit_get_work_item_attachment",
-			// Queries & Backlogs
-			"mcp_azure_devops_wit_query_by_wiql",
-			"mcp_azure_devops_wit_get_query",
-			"mcp_azure_devops_wit_get_query_results_by_id",
-			"mcp_azure_devops_wit_list_backlogs",
-			"mcp_azure_devops_wit_list_backlog_work_items",
-			"mcp_azure_devops_wit_get_work_items_for_iteration",
-			// Iterations & Capacity — read
-			"mcp_azure_devops_work_list_iterations",
-			"mcp_azure_devops_work_list_team_iterations",
-			"mcp_azure_devops_work_get_team_capacity",
-			"mcp_azure_devops_work_get_iteration_capacities",
-			"mcp_azure_devops_work_get_team_settings",
-		]);
-		if (AZURE_DEVOPS_READ_TOOLS.has(event.toolName)) {
+		// Allow only explicitly classified Azure DevOps reads without confirmation.
+		// Write tools, mixed-tool write actions, and future additions require confirmation.
+		if (isReadOnlyAzureDevOpsCall(event.toolName, event.input)) {
 			return undefined;
 		}
 
