@@ -2,7 +2,7 @@
 name: test-writer
 description: Test-first specialist that creates behavior-focused tests at confirmed public seams using the TDD skill
 tools: read, grep, find, ls, bash, edit, write
-model: openai-codex/gpt-5.6-sol
+model: openai-codex/gpt-6-sol
 thinking: medium
 systemPromptMode: append
 inheritProjectContext: true
