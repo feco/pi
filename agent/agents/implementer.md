@@ -1,9 +1,9 @@
 ---
 name: implementer
-description: Production-code specialist that implements approved behavior at the repository's quality bar
+description: Production-code specialist; gpt-6-sol high by default. The orchestrator may override model to openai-codex/gpt-6-sol:medium only for very simple tasks.
 tools: read, grep, find, ls, bash, edit, write, contact_supervisor
-model: openai-codex/gpt-6-astra
-thinking: low
+model: openai-codex/gpt-6-sol
+thinking: high
 systemPromptMode: append
 inheritProjectContext: true
 inheritSkills: false
