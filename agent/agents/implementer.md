@@ -2,8 +2,8 @@
 name: implementer
 description: Production-code specialist that implements approved behavior at the repository's quality bar
 tools: read, grep, find, ls, bash, edit, write, contact_supervisor
-model: openai-codex/gpt-6-sol
-thinking: medium
+model: openai-codex/gpt-6-astra
+thinking: low
 systemPromptMode: append
 inheritProjectContext: true
 inheritSkills: false
