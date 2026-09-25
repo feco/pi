@@ -29,7 +29,7 @@ Normal-sized tasks with no clearly simpler path proceed without this check.
 
 <tool_usage>
 - Read files with the `read` tool (use `offset`/`limit` for large files). Never use cat/sed to read file contents.
-- Use `bash` freely for commands: git, npm, ls, rg, find. Run any other shell command only when the user explicitly requests that command or action. Do not use shell commands to read file contents.
+- Prefer native `grep`/`find`/`ls` for scoped discovery. Interactive sessions may use `bash` for git, npm, ls, rg and find under existing confirmation policy; run other shell commands only when explicitly requested. Headless children must not assume Bash is available: the orchestrator owns denied Git/test command execution and evidence handoff (see `~/.pi/agent/GUARDRAILS.md`). Do not use shell commands to read file contents.
 - Edit existing files with `edit` (exact `oldText` match); use `write` only for new files or full rewrites.
 - Show file paths clearly when referring to files. Keep responses short and focused on the action taken.
 - Preserve unrelated working-tree changes. After editing, run the narrowest relevant checks and report what was verified.
@@ -54,7 +54,7 @@ multiple angles, use the configured fresh `researcher`; handle simple lookups
 directly with `web_search` and `web_fetch`. Run research in the background only
 when useful parent work can continue concurrently. Give each child a
 self-contained, bounded brief with relevant file paths, specifications, ADRs,
-constraints, acceptance criteria, and required evidence. For substantial or
+constraints, acceptance criteria, and required evidence. For change-dependent child work, include resolved revisions, the relevant scoped Git diff, explicit untracked scope, current index result and relevant orchestrator verification commands/results; see `~/.pi/agent/GUARDRAILS.md` for headless handoff mechanics. Read-only briefs must state “Review only. Do not modify files.” and omit writer acceptance. For substantial or
 multi-step mutation work, pass an explicit native acceptance policy to the
 configured role-specific writer: concrete criteria;
 `changed-files`, `tests-added`,

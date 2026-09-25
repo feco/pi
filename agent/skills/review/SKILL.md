@@ -19,7 +19,7 @@ Review only repository data already present on disk. Find concrete defects that 
 
 ## 1. Resolve the target
 
-Use the user-supplied target exactly when possible. Validate revisions with `git rev-parse --verify` and reject options masquerading as revisions (use `--` before paths).
+Use the user-supplied target exactly when possible. When shell is available, validate revisions with `git rev-parse --verify` and reject options masquerading as revisions (use `--` before paths). In headless sessions with Bash denied, review the orchestrator's resolved revisions and scoped diff instead; attribute that evidence and mark missing revision facts unknown (see `~/.pi/agent/GUARDRAILS.md`).
 
 If omitted, default to the single commit `HEAD` and say so. Interpret targets as follows:
 
@@ -57,7 +57,7 @@ Do not fetch missing specifications. If no local spec exists, say so and continu
 
 Start broad, then inspect every human-written changed line:
 
-1. Use `git diff --stat`, `--name-status`, and the relevant diff command.
+1. When Bash is available, use `git diff --stat`, `--name-status`, and the relevant diff command; otherwise use the orchestrator's scoped diff, index result and explicit untracked scope.
 2. Inspect the main behavior/design files first, then tests, callers, configuration, migrations, generated artifacts, dependency manifests, and lockfiles.
 3. Read enough surrounding code to validate each suspected issue. Search local callers, types, invariants, and tests where necessary.
 4. For each candidate, prove a concrete failure mode and check whether another changed or existing path handles it.
@@ -71,7 +71,7 @@ Prioritize correctness, security, data loss, compatibility, and operability. Rep
 
 Use static reasoning first. You may run additional read-only `git` commands freely. Before running project commands (tests, linters, builds, package scripts, or executables), tell the user exactly what you want to run and get approval unless they explicitly requested execution. Never alter tracked files during review.
 
-When approved:
+When headless Bash is denied, ask the orchestrator to run approved verification and attribute its results as parent-supplied, not child-run. When approved and Bash is available:
 
 - Prefer the smallest relevant existing test/lint command.
 - Do not install packages, update lockfiles, run migrations against shared data, start services, or execute untrusted changed scripts without separate explicit approval.
