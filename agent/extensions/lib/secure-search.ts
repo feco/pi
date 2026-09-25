@@ -1,7 +1,7 @@
 import { constants } from "node:fs";
 import { lstat, open, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
-import { contained, controlStateRoots, deniedName, isControlState, protectedCwd, skipDirectory } from "./file-authority.ts";
+import { contained, controlStateRoots, deniedName, installationRoot, isControlState, nestedConfigPath, protectedCwd, skipDirectory } from "./file-authority.ts";
 
 const MAX_DEPTH = 32;
 const MAX_ENTRIES = 10_000;
@@ -90,7 +90,9 @@ export async function secureSearch(kind: Kind, input: Input, cwd: string, signal
 	const root = await realpath(cwd);
 	// Check both the supplied cwd and its canonical name BEFORE any directory traversal.
 	if (protectedCwd(cwd, root) || path.resolve(cwd) !== root) throw new Error("Search denied: protected or symbolic-link working directory");
-	const controlRoots = await controlStateRoots();
+	const installation = await installationRoot();
+	if (nestedConfigPath(root, installation)) throw new Error("Search denied: nested Pi configuration working directory");
+	const controlRoots = await controlStateRoots(installation);
 	if (isControlState(root, controlRoots)) throw new Error("Search denied: protected working directory");
 	const requested = (input.path as string | undefined) || ".";
 	if (requested.split(/[\\/]/).some((part) => deniedName(part, true) || deniedName(part, false))) {

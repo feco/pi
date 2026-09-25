@@ -1,6 +1,7 @@
 import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { expandPath, resolveToCwd } from "../node_modules_pi/dist/core/tools/path-utils.js";
 import { isEnvFileName } from "../block-env-reads.ts";
 
 // Search traversal exclusions are not file-tool permissions.
@@ -42,10 +43,10 @@ export function protectedCwd(cwd: string, canonical: string): boolean {
 
 // The extension's location is trusted; neither cwd nor a caller-supplied path chooses the installation.
 const agentDir = fileURLToPath(new URL("../../", import.meta.url));
+export const installationRoot = () => realpath(agentDir);
 
 /** Lexical control paths and their existing canonical aliases; resolve once per operation. */
-export async function controlStateRoots(): Promise<string[]> {
-	const installation = await realpath(agentDir);
+export async function controlStateRoots(installation: string): Promise<string[]> {
 	const roots = [
 		...[agentDir, installation].flatMap((base) => ["sessions", "missions", "trust.json", ".pi-subagents"].map((name) => path.join(base, name))),
 		...[path.dirname(agentDir), path.dirname(installation)].flatMap((parent) => [
@@ -68,10 +69,23 @@ const installDocs = path.join(agentDir, "extensions/node_modules_pi");
 const readRoots = [path.join(agentDir, "skills"), installDocs];
 const readFiles = [path.join(agentDir, "GUARDRAILS.md"), path.join(agentDir, "SYSTEM.md")];
 const protectedDirs = new Set(["extensions", "bin", "agents", "skills", "npm", "git", "node_modules_pi", "sessions", "missions"]);
-const protectedFiles = new Set(["system.md", "settings.json", "models.json", "models-store.json", "presets.json", "trust.json", "package.json", "package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock"]);
+const protectedFiles = new Set(["system.md", "append_system.md", "agents.override.md", "agents.md", "claude.md", "settings.json", "models.json", "models-store.json", "presets.json", "trust.json", "package.json", "package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock"]);
 
 function installedParts(target: string, installation: string): string[] {
 	return contained(installation, target) ? path.relative(installation, target).split(path.sep) : [];
+}
+
+/** Exclude nested Pi configuration, not the installation's own .pi ancestor or a trusted read root. */
+export function nestedConfigPath(target: string, installation: string, trustedRoot?: string): boolean {
+	const configParts = installedParts(target, installation);
+	const piRoot = path.dirname(installation);
+	const activePiRoot = path.basename(piRoot).toLowerCase() === ".pi" && contained(piRoot, target);
+	const activePiParts = activePiRoot ? path.relative(piRoot, target).split(path.sep) : [];
+	const scopedParts = configParts.length ? configParts : activePiRoot
+		? activePiParts
+		: trustedRoot && contained(trustedRoot, target)
+			? path.relative(trustedRoot, target).split(path.sep) : target.split(path.sep);
+	return scopedParts.some((part) => part.toLowerCase() === ".pi" || part.toLowerCase() === ".agents");
 }
 
 /** Only these exact installed files and explicitly rooted skill/package aliases are trusted reads. */
@@ -109,13 +123,16 @@ const deny = (reason: string): FileDecision => ({ kind: "deny", reason: `File au
 export async function fileAuthority(tool: FileTool, value: unknown, cwd: string): Promise<FileDecision> {
 	if (typeof value !== "string" || !value || CONTROL.test(value)) return deny("invalid path");
 	try {
-		const rawParts = value.split(/[\\/]/).filter(Boolean);
+		// Check original components before normalization can collapse restricted/.. segments.
+		// fileURLToPath decodes escapes after URL parsing, which can also collapse dot segments.
+		const rawParts = [value, ...(/^@?file:\/\//.test(value) ? [decodeURIComponent(value)] : []), expandPath(value)]
+			.flatMap((candidate) => candidate.split(/[\\/]/).filter(Boolean));
 		if (rawParts.some((part) => deniedName(part, true) || deniedName(part, false))) return deny("restricted name");
 		const workingPath = path.resolve(cwd);
 		const workingRoot = await realpath(workingPath);
 		if (protectedCwd(cwd, workingRoot)) return deny("working directory inside restricted directory");
-		const target = path.resolve(cwd, value);
-		const installation = await realpath(agentDir);
+		const target = resolveToCwd(value, cwd);
+		const installation = await installationRoot();
 		const trusted = tool === "read" ? await trustedRead(target, installation) : undefined;
 		// A configured read-root alias is the only symlink permitted at the root;
 		// descendant components are still checked with lstat below.
@@ -157,20 +174,11 @@ export async function fileAuthority(tool: FileTool, value: unknown, cwd: string)
 		const packageRoot = await realpath(installDocs).catch(() => undefined);
 		const protectedAliases = await Promise.all([...protectedDirs].map((name) =>
 			realpath(path.join(agentDir, name)).catch(() => undefined)));
-		const controlRoots = await controlStateRoots();
+		const controlRoots = await controlStateRoots(installation);
 		const protectedRuntime = protectedInstallation(resolved, installation) ||
 			(packageRoot !== undefined && contained(packageRoot, resolved)) ||
 			protectedAliases.some((alias) => alias !== undefined && contained(alias, resolved));
-		// Do not treat the installation's own .pi ancestor as a nested config dir.
-		const configParts = installedParts(resolved, installation);
-		const piRoot = path.dirname(installation);
-		const activePiRoot = path.basename(piRoot).toLowerCase() === ".pi" && contained(piRoot, resolved);
-		const activePiParts = activePiRoot ? path.relative(piRoot, resolved).split(path.sep) : [];
-		const scopedParts = configParts.length ? configParts : activePiRoot
-			? activePiParts
-			: trusted && contained(trusted.root, resolved)
-				? path.relative(trusted.root, resolved).split(path.sep) : resolved.split(path.sep);
-		const nestedConfig = scopedParts.some((part) => part.toLowerCase() === ".pi" || part.toLowerCase() === ".agents");
+		const nestedConfig = nestedConfigPath(resolved, installation, trusted?.root);
 		if (tool === "read" && nestedConfig) return deny("nested Pi configuration read");
 		const consent = (!inCwd && !trusted) || (tool !== "read" && (protectedRuntime || nestedConfig)) ||
 			isControlState(resolved, controlRoots);
