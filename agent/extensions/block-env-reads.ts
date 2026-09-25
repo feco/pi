@@ -65,7 +65,7 @@ const ENV_SAMPLE_TAILS = new Set([
  * Matches `.env`, `.env.<segs>`, `<prefix>.env`, `<prefix>.env.<segs>`,
  * but allows `.env.example` / `foo.env.sample` / `.env.production.template`.
  */
-function isEnvFileName(name: string): boolean {
+export function isEnvFileName(name: string): boolean {
 	if (!/\.env(?:\.[\w-]+)*$/i.test(name)) return false;
 	const parts = name.toLowerCase().split(".");
 	const envIdx = parts.indexOf("env");
@@ -255,8 +255,8 @@ export default function (pi: ExtensionAPI) {
 			case "edit":
 			case "write":
 			case "ls": {
-				const path = event.input.path as string | undefined;
-				if (path && isEnvFile(path)) {
+				const path = event.input.path;
+				if (typeof path === "string" && isEnvFile(path)) {
 					return { block: true, reason: FILE_REASON };
 				}
 				break;
@@ -268,7 +268,7 @@ export default function (pi: ExtensionAPI) {
 					path?: string;
 					glob?: string;
 				};
-				if (input.path && isEnvFile(input.path)) {
+				if (typeof input.path === "string" && isEnvFile(input.path)) {
 					return { block: true, reason: FILE_REASON };
 				}
 				if (input.glob && /\.env/i.test(input.glob)) {
@@ -283,7 +283,7 @@ export default function (pi: ExtensionAPI) {
 					path?: string;
 					pattern: string;
 				};
-				if (input.path && isEnvFile(input.path)) {
+				if (typeof input.path === "string" && isEnvFile(input.path)) {
 					return { block: true, reason: FILE_REASON };
 				}
 				if (/\.env/i.test(input.pattern)) {
@@ -314,7 +314,7 @@ export default function (pi: ExtensionAPI) {
 					code?: string;
 					language?: string;
 				};
-				if (input.path && isEnvFile(input.path)) {
+				if (typeof input.path === "string" && isEnvFile(input.path)) {
 					return { block: true, reason: FILE_REASON };
 				}
 				if (input.code) {
@@ -373,7 +373,7 @@ export default function (pi: ExtensionAPI) {
 			//    from the searchable knowledge base)
 			case "ctx_index": {
 				const input = event.input as { path?: string; exclude?: string[] };
-				if (input.path && isEnvFile(input.path)) {
+				if (typeof input.path === "string" && isEnvFile(input.path)) {
 					return { block: true, reason: FILE_REASON };
 				}
 				const excludes = input.exclude ?? [];
