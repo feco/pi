@@ -1,7 +1,7 @@
 import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { expandPath, resolveToCwd } from "../node_modules_pi/dist/core/tools/path-utils.js";
+import { expandPath, resolveToCwd } from "./path-utils.ts";
 import { isEnvFileName } from "../block-env-reads.ts";
 
 // Search traversal exclusions are not file-tool permissions.

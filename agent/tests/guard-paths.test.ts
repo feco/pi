@@ -8,9 +8,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import registerBlockEnvReads from "../extensions/block-env-reads.ts";
 import registerConfirmReads from "../extensions/confirm-reads-outside-cwd.ts";
 import registerConfirmWrites from "../extensions/confirm-writes.ts";
-import { createReadTool } from "../extensions/node_modules_pi/dist/core/tools/read.js";
-import { createEditTool } from "../extensions/node_modules_pi/dist/core/tools/edit.js";
-import { createWriteTool } from "../extensions/node_modules_pi/dist/core/tools/write.js";
+// Explicit test-only package selection; production guards never load Pi internals.
+const packageRoot = process.env.PI_TEST_PACKAGE_DIR
+	? pathToFileURL(`${path.resolve(process.env.PI_TEST_PACKAGE_DIR)}${path.sep}`)
+	: new URL("../extensions/node_modules_pi/", import.meta.url);
+const { createReadTool } = await import(new URL("dist/core/tools/read.js", packageRoot).href);
+const { createEditTool } = await import(new URL("dist/core/tools/edit.js", packageRoot).href);
+const { createWriteTool } = await import(new URL("dist/core/tools/write.js", packageRoot).href);
 
 type Handler = (
 	event: { type: "tool_call"; toolCallId: string; toolName: string; input: Record<string, unknown> },

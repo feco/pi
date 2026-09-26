@@ -26,7 +26,7 @@ The active installation is derived from the guard source, not caller input. Writ
 
 Explicitly trusted Pi skill and installation documentation/package roots, plus `agent/SYSTEM.md` and `agent/GUARDRAILS.md`, retain automatic read access outside cwd. Other global instruction files (`APPEND_SYSTEM.md`, `AGENTS.override.md`, `AGENTS.md`, `CLAUDE.md`) are protected configuration for writes, not blanket read exemptions. Only configured read-root aliases may themselves be symlinks; their descendants are still checked. There is no broad `~/.pi` read exemption.
 
-File-tool targets use the installed Pi path resolver (including home expansion, `@` prefixes, file URLs and Unicode spaces); original and decoded components are checked before path collapse. Missing `read` targets fail closed before Pi's fuzzy fallback. Search rejects nested `.pi`/`.agents` configuration cwd; file reads beneath those directories remain denied.
+File-tool targets use the repository-local macOS/Linux path resolver in `agent/extensions/lib/path-utils.ts` (including home expansion, `@` prefixes, file URLs and Unicode spaces); original and decoded components are checked before path collapse. Missing `read` targets fail closed before Pi's fuzzy fallback. Search rejects nested `.pi`/`.agents` configuration cwd; file reads beneath those directories remain denied.
 
 Ordinary source names such as `auth.ts`, `auth/handler.ts` and `src/dist/value.ts` are not secrets merely by name. Known credential/config data such as `auth.json`, `credentials.json` and secret `.env` variants remain blocked; nonsecret env examples/templates are allowed.
 
@@ -50,12 +50,13 @@ This is **not an OS sandbox**. Concurrent filesystem changes can race validation
 
 Agent profiles must expose `grep`, `find` and `ls` to use native searches. A profile that exposes only Bash for searching cannot search autonomously under this policy; guard registration does not expand its tool permissions.
 
-The guard depends on `agent/extensions/node_modules_pi/dist/core/tools/path-utils.js`; the `node_modules_pi` alias must resolve to the same Pi installation/version actually running. Deploy guards, helpers and matching alias together. Existing sessions retain their loaded guards. Prefer a fresh restart; use `/reload` only if it completes without extension errors, and stop/restart on any error because a failed reload can discard the old guards. New children load the current files through the launcher. Maintaining guard source from an interactive agent requires explicit confirmation; no headless bypass switch exists.
+Deploy guards and their repository-local helpers together; loading the guards requires no Pi package symlink. The optional `node_modules_pi` alias still identifies a trusted installation documentation/package read root. Path normalization must agree with the running Pi executors: run the contract test against each machine's Pi installation before rollout and after Pi upgrades. Existing sessions retain their loaded guards. Prefer a fresh restart; use `/reload` only if it completes without extension errors, and stop/restart on any error because a failed reload can discard the old guards. New children load the current files through the launcher. Maintaining guard source from an interactive agent requires explicit confirmation; no headless bypass switch exists.
 
 Run the local suite with Node 22.22.3 or a compatible newer release:
 
 ```sh
-node --experimental-strip-types --test agent/tests/guard-paths.test.ts agent/tests/guard-config.test.ts agent/tests/guard-search-cwd.test.ts agent/tests/guards.test.ts
+PI_TEST_PACKAGE_DIR="/absolute/path/to/installed/pi-coding-agent" \
+  node --experimental-strip-types --test agent/tests/*.test.ts
 ```
 
-Tests use repository-contained fixtures and inert shell strings; denial tests do not execute payloads.
+`PI_TEST_PACKAGE_DIR` is test-only and selects the actual Pi package root (the directory containing `dist/`) for the executor contract test. If omitted, that test uses the legacy `agent/extensions/node_modules_pi` alias. Other tests need neither the variable nor the alias. Tests use repository-contained fixtures and inert shell strings; denial tests do not execute payloads.
