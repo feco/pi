@@ -3,7 +3,7 @@ name: global-reviewer
 description: Read-only end-to-end impact reviewer for missed dependencies, existing data, compatibility, and operational follow-ups
 tools: read, grep, find, ls
 model: openai-codex/gpt-6-astra
-thinking: xhigh
+thinking: medium
 systemPromptMode: replace
 inheritProjectContext: true
 inheritSkills: false
