@@ -55,6 +55,68 @@ export function isReadOnlyAzureDevOpsCall(toolName: string, input: unknown): boo
 	return typeof action === "string" && allowedActions.has(action);
 }
 
+// Positive action AND argument lists: a safe action must not smuggle launch/output options.
+// Native pi-subagents owns session/target validation; this hook grants no new child authority.
+function isSafeCoordinationCall(toolName: string, input: unknown): boolean {
+	if (!["subagent_wait", "subagent", "subagent_supervisor"].includes(toolName) ||
+		typeof input !== "object" || input === null || Array.isArray(input)) return false;
+	const prototype = Object.getPrototypeOf(input);
+	if (prototype !== Object.prototype && prototype !== null) return false;
+	const args = input as Record<string, unknown>;
+	const has = (key: string) => Object.hasOwn(args, key);
+	const only = (...fields: string[]) =>
+		Reflect.ownKeys(args).every((key) => typeof key === "string" && fields.includes(key));
+	const text = (value: unknown) => typeof value === "string" && value.trim().length > 0;
+	const opaque = (value: unknown) => typeof value === "string" && /^[A-Za-z0-9_-]+$/.test(value);
+	const scope = () => !has("agentScope") || ["user", "project", "both"].includes(args.agentScope as string);
+	const index = () => !has("index") ||
+		(typeof args.index === "number" && Number.isSafeInteger(args.index) && args.index >= 0);
+
+	if (toolName === "subagent_wait") {
+		return only("id", "all", "nonBlocking", "timeoutMs") &&
+			(!has("id") || opaque(args.id)) &&
+			(!has("all") || typeof args.all === "boolean") &&
+			(!has("nonBlocking") || typeof args.nonBlocking === "boolean") &&
+			(args.nonBlocking !== true || (has("id") && !has("all"))) &&
+			(!has("timeoutMs") || (typeof args.timeoutMs === "number" &&
+				Number.isSafeInteger(args.timeoutMs) && args.timeoutMs > 0));
+	}
+	if (toolName === "subagent_supervisor") {
+		return only("action") && ["list", "status", "pending"].includes(args.action as string);
+	}
+	switch (args.action) {
+		case "list":
+			return only("action", "agentScope") && scope();
+		case "get":
+			return only("action", "agent", "chainName", "agentScope") && scope() &&
+				has("agent") !== has("chainName") && text(has("agent") ? args.agent : args.chainName);
+		case "models":
+			return only("action", "agent", "agentScope") && scope() && (!has("agent") || text(args.agent));
+		case "guide":
+			return only("action", "topic") && (!has("topic") || [
+				"overview", "workflows", "agents", "missions", "observability",
+				"tool-reference", "configuration", "models", "watchdog", "extension-api",
+			].includes(args.topic as string));
+		case "children.list":
+			return only("action");
+		case "status":
+			return only("action", "id", "runId", "view", "index", "lines") &&
+				!(has("id") && has("runId")) &&
+				(!has("id") || opaque(args.id)) && (!has("runId") || opaque(args.runId)) &&
+				(!has("view") || ["fleet", "transcript"].includes(args.view as string)) && index() &&
+				(!has("lines") || (typeof args.lines === "number" &&
+					Number.isSafeInteger(args.lines) && args.lines >= 1 && args.lines <= 500));
+		case "steer":
+			// Recovery can launch a replacement worker; it is not ordinary coordination.
+			return only("action", "id", "runId", "message", "steeringRecovery", "mode", "index") &&
+				has("id") !== has("runId") && opaque(has("id") ? args.id : args.runId) &&
+				text(args.message) && args.steeringRecovery === false &&
+				(!has("mode") || ["steer", "follow_up", "auto"].includes(args.mode as string)) && index();
+		default:
+			return false;
+	}
+}
+
 function validMutation(tool: "edit" | "write", input: Record<string, unknown>): boolean {
 	if (tool === "write") return typeof input.content === "string";
 	if (Array.isArray(input.edits)) {
@@ -76,6 +138,7 @@ export default function (pi: ExtensionAPI) {
 			return searchReady ? undefined : { block: true, reason: "Secure search registration failed" };
 		}
 		if (event.toolName === "contact_supervisor") return undefined;
+		if (isSafeCoordinationCall(event.toolName, event.input)) return undefined;
 		if (event.toolName === "read") return undefined; // The read extension owns read authorization and UI.
 		if (event.toolName === "edit" || event.toolName === "write") {
 			const tool = event.toolName;

@@ -87,6 +87,118 @@ test("every bash command requires consent and is blocked without UI or when cons
 	assert.deepEqual(violations, [], "bash must never bypass the consent boundary");
 });
 
+test("subagent coordination auto-approves only narrow safe calls and preserves confirmation for everything else", async () => {
+	let handler: ToolCallHandler | undefined;
+	registerConfirmWrites({
+		registerTool() {},
+		on(event: string, callback: ToolCallHandler) {
+			if (event === "tool_call") handler = callback;
+		},
+	} as unknown as Parameters<typeof registerConfirmWrites>[0]);
+	assert.ok(handler, "extension must register a tool_call handler");
+
+	// Permission events only: never execute a child, shell, workflow, or file payload.
+	const cases: Array<[string, Record<string, unknown>, "allow" | "confirm"]> = [
+		["subagent_wait", {}, "allow"],
+		["subagent_wait", { id: "child_01-abc", timeoutMs: 1 }, "allow"],
+		["subagent_wait", { all: true, nonBlocking: false, timeoutMs: 1000 }, "allow"],
+		["subagent_wait", { id: "child-01", nonBlocking: true }, "allow"],
+		["subagent", { action: "list" }, "allow"],
+		["subagent", { action: "list", agentScope: "user" }, "allow"],
+		["subagent", { action: "get", agent: "reviewer", agentScope: "project" }, "allow"],
+		["subagent", { action: "get", chainName: "review", agentScope: "both" }, "allow"],
+		["subagent", { action: "models" }, "allow"],
+		["subagent", { action: "models", agent: "reviewer", agentScope: "both" }, "allow"],
+		["subagent", { action: "guide" }, "allow"],
+		["subagent", { action: "guide", topic: "configuration" }, "allow"],
+		["subagent", { action: "children.list" }, "allow"],
+		["subagent", { action: "status" }, "allow"],
+		["subagent", { action: "status", id: "child-01", view: "fleet", index: 0, lines: 1 }, "allow"],
+		["subagent", { action: "status", runId: "run-01", view: "transcript", index: 2, lines: 500 }, "allow"],
+		["subagent", { action: "steer", id: "child-01", message: "Continue review", steeringRecovery: false }, "allow"],
+		...["steer", "follow_up", "auto"].map((mode): [string, Record<string, unknown>, "allow"] =>
+			["subagent", { action: "steer", runId: "run-01", message: "Continue review", steeringRecovery: false, mode, index: 0 }, "allow"]),
+		...["list", "status", "pending"].map((action): [string, Record<string, unknown>, "allow"] =>
+			["subagent_supervisor", { action }, "allow"]),
+		["subagent_wait", { id: "../child" }, "confirm"],
+		["subagent_wait", { id: "" }, "confirm"],
+		["subagent_wait", { id: 42 }, "confirm"],
+		["subagent_wait", { all: "true" }, "confirm"],
+		["subagent_wait", { nonBlocking: "false" }, "confirm"],
+		["subagent_wait", { nonBlocking: true }, "confirm"],
+		["subagent_wait", { id: "child-01", nonBlocking: true, all: false }, "confirm"],
+		...[0, -1, 1.5, "1000", null].map((timeoutMs): [string, Record<string, unknown>, "confirm"] =>
+			["subagent_wait", { timeoutMs }, "confirm"]),
+		["subagent_wait", { id: "child-01", cwd: "/synthetic" }, "confirm"],
+		["subagent", { workflowScript: "inert workflow" }, "confirm"],
+		["subagent", { agent: "reviewer", task: "inert task" }, "confirm"],
+		...["workflowScript", "gate", "acceptance", "output", "sessionDir", "share", "cwd", "dir", "config", "unknown"].map((field): [string, Record<string, unknown>, "confirm"] =>
+			["subagent", { action: "status", [field]: "inert" }, "confirm"]),
+		...["launch", "resume", "stop", "interrupt", "checkpoint", "schedule", "config", "new-action"].map((action): [string, Record<string, unknown>, "confirm"] =>
+			["subagent", { action }, "confirm"]),
+		["subagent", { action: 42 }, "confirm"],
+		["subagent", { action: "list", agentScope: "global" }, "confirm"],
+		["subagent", { action: "list", agent: "reviewer" }, "confirm"],
+		["subagent", { action: "get" }, "confirm"],
+		["subagent", { action: "get", agent: "reviewer", chainName: "review" }, "confirm"],
+		["subagent", { action: "get", agent: "   " }, "confirm"],
+		["subagent", { action: "get", chainName: 42 }, "confirm"],
+		["subagent", { action: "models", agent: null }, "confirm"],
+		["subagent", { action: "models", chainName: "review" }, "confirm"],
+		["subagent", { action: "guide", topic: "unknown-topic" }, "confirm"],
+		["subagent", { action: "guide", topic: 42 }, "confirm"],
+		["subagent", { action: "children.list", id: "child-01" }, "confirm"],
+		["subagent", { action: "status", id: "child-01", runId: "run-01" }, "confirm"],
+		["subagent", { action: "status", id: "" }, "confirm"],
+		["subagent", { action: "status", runId: 42 }, "confirm"],
+		["subagent", { action: "status", view: "unknown" }, "confirm"],
+		["subagent", { action: "status", index: -1 }, "confirm"],
+		["subagent", { action: "status", index: 0.5 }, "confirm"],
+		...[0, 501, 1.5, "10"].map((lines): [string, Record<string, unknown>, "confirm"] =>
+			["subagent", { action: "status", lines }, "confirm"]),
+		["subagent", { action: "steer", id: "child-01", message: "Continue" }, "confirm"],
+		["subagent", { action: "steer", id: "child-01", message: "Continue", steeringRecovery: true }, "confirm"],
+		["subagent", { action: "steer", id: "child-01", message: "Continue", steeringRecovery: "false" }, "confirm"],
+		["subagent", { action: "steer", message: "Continue", steeringRecovery: false }, "confirm"],
+		["subagent", { action: "steer", id: "child-01", runId: "run-01", message: "Continue", steeringRecovery: false }, "confirm"],
+		...["", "   ", 42].map((message): [string, Record<string, unknown>, "confirm"] =>
+			["subagent", { action: "steer", id: "child-01", message, steeringRecovery: false }, "confirm"]),
+		["subagent", { action: "steer", id: "child-01", message: "Continue", steeringRecovery: false, mode: "recover" }, "confirm"],
+		["subagent", { action: "steer", id: "child-01", message: "Continue", steeringRecovery: false, index: -1 }, "confirm"],
+		["subagent", { action: "steer", id: "child-01", message: "Continue", steeringRecovery: false, dir: "/synthetic" }, "confirm"],
+		...["reply", "send", "ask", "unknown"].map((action): [string, Record<string, unknown>, "confirm"] =>
+			["subagent_supervisor", { action }, "confirm"]),
+		["subagent_supervisor", { action: "status", id: "child-01" }, "confirm"],
+		["subagent_supervisor", { action: "list", share: true }, "confirm"],
+		["intercom", { action: "list" }, "confirm"],
+		["intercom", { action: "send", message: "inert message" }, "confirm"],
+	];
+	const violations: string[] = [];
+	for (const { hasUI, consent } of [
+		{ hasUI: false, consent: true }, { hasUI: true, consent: false }, { hasUI: true, consent: true },
+	]) {
+		for (const [toolName, input, policy] of cases) {
+			let confirmations = 0;
+			let reasonRequests = 0;
+			const label = `UI=${hasUI} consent=${consent} ${toolName} ${JSON.stringify(input)}`;
+			const result = await handler({ type: "tool_call", toolCallId: "coordination-call", toolName, input }, {
+				cwd: "/synthetic-coordination-project", hasUI,
+				ui: {
+					async confirm() { confirmations++; return consent; },
+					async input() { reasonRequests++; return "synthetic denial"; },
+				},
+			});
+			const blocked = policy === "confirm" && (!hasUI || !consent);
+			if ((result?.block === true) !== blocked) violations.push(`${label}: expected block=${blocked}`);
+			const expectedConfirmations = policy === "confirm" && hasUI ? 1 : 0;
+			if (confirmations !== expectedConfirmations) violations.push(`${label}: expected ${expectedConfirmations} confirmations, got ${confirmations}`);
+			const expectedReasonRequests = policy === "confirm" && hasUI && !consent ? 1 : 0;
+			if (reasonRequests !== expectedReasonRequests) violations.push(`${label}: expected ${expectedReasonRequests} reason dialogs, got ${reasonRequests}`);
+		}
+	}
+	assert.deepEqual(violations, [], "only explicitly safe coordination may bypass confirmation");
+});
+
 test("structured search runs headlessly without processes and stays inside non-secret project files", async (t) => {
 	type SearchTool = {
 		name: string;

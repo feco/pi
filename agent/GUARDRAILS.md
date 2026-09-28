@@ -12,11 +12,28 @@ The child launcher `agent/bin/pi-subagent-safe` loads `block-env-reads.ts`, `con
 | Access Pi control state through file tools | Explicit UI confirmation | Denied |
 | Bash, including shell searches | Explicit UI confirmation | Denied |
 | Secured native `grep`/`find`/`ls` inside cwd | Automatic | Automatic |
+| Narrow subagent wait, inspection, and non-recovering steering calls (below) | Automatic | Automatic if tool is exposed |
+| Other subagent operations, supervisor messages, and generic `intercom` | Explicit UI confirmation | Denied |
 | `contact_supervisor` | Communication only | Communication only |
 
 There is no blanket unlock: consent covers one operation, not later calls. Mutation dialogs show the tool, resolved target and complete proposed arguments. Refusal denies the operation. The target, mutation arguments and file authority are rechecked after consent. The read extension owns read dialogs; the mutation extension owns edit/write dialogs, so each request gets one confirmation.
 
 For example, creating `agent/agents/global-reviewer.md` requires confirmation in an interactive session; a child cannot grant itself that permission.
+
+## Subagent coordination
+
+Auto-approval uses exact tool/action and argument allowlists, not a blanket exemption for `subagent`:
+
+- `subagent_wait`: only `id`, `all`, `nonBlocking`, and `timeoutMs`. Non-blocking subscriptions require an `id` and no `all` field.
+- `subagent`: `list`, `get`, `models`, `guide`, `children.list`, and `status`, with only their inspection arguments. `get` requires exactly one of `agent` or `chainName`; discovery accepts `agentScope`. `guide` accepts only packaged guide topics. `status` accepts an optional `id` or `runId`, `view`, `index`, and `lines`.
+- `subagent` steering: exactly one of `id` or `runId`, a nonempty `message`, and **explicit `steeringRecovery: false`**, with optional `mode` and `index`. Default/recovery-capable steering still requires confirmation because it can restart a worker.
+- `subagent_supervisor`: only `list`, `status`, and `pending`, with no additional arguments. `send`, `reply`, and `ask` remain confirmed. Generic `intercom` is not auto-approved, including its inspection actions, because another extension can own that name.
+
+IDs must be opaque alphanumeric/underscore/hyphen identifiers, not paths. Argument types and bounds are checked; unknown actions, extra fields, and malformed calls fall through to confirmation (or denial without UI). No `cwd`, `dir`, output/session-path overrides, `workflowScript`, `gate`, `acceptance`, or sharing options are auto-approved alongside a safe action. Launches, resumes, configuration changes, checkpoint decisions, schedules, cleanup, and budget grants remain confirmed.
+
+Example automatic steering: `subagent({ action: "steer", id: "run-id", message: "Focus on the failing test", steeringRecovery: false })`.
+
+Native `pi-subagents` remains responsible for current-session ownership, target resolution, and child permissions. The guard does not independently resolve ownership or execute coordination requests. Steering can redirect work already authorized for a child; it is not human approval of a new permission or product decision. This change does not allow child Bash, runtime verification commands, or new launches. Review these contracts when upgrading `pi-subagents`; the tests exercise the permission hook with inert calls, not the subagent runtime.
 
 ## Permanent restrictions
 
