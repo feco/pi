@@ -64,6 +64,5 @@ build/
 out/
 *.tsbuildinfo
 
-# ─── Lock files (config repo — not needed) ─────────────────────
-agent/extensions/package-lock.json
+# npm's extension lockfile is tracked for reproducible guard dependencies.
 agent/extensions/bun.lock

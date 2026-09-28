@@ -232,7 +232,7 @@ export default function (pi: ExtensionAPI) {
 			pi.registerTool({
 				name,
 				label: `Secure ${name}`,
-				description: `Filesystem-only ${name} confined to non-secret regular files under the working directory; no processes. Uses JavaScript regex/glob semantics and conservative positive .gitignore rules. File read/edit/write reject linked files and secrets; protected Pi code, config and outside files require explicit UI consent.`,
+				description: `Filesystem-only ${name} confined to non-secret regular files under the working directory; no processes. Uses JavaScript regex/Node glob query semantics and case-sensitive .gitignore filtering, including exceptions; security exclusions always win. Warns when unsafe ignore policies cause partial results. File read/edit/write reject linked files and secrets; protected Pi code, config and outside files require explicit UI consent.`,
 				parameters: { type: "object", properties: fields[name], required: name === "ls" ? [] : ["pattern"], additionalProperties: false } as unknown as Parameters<ExtensionAPI["registerTool"]>[0]["parameters"],
 				async execute(_id, params, signal, _onUpdate, ctx) {
 					return { content: [{ type: "text" as const, text: await secureSearch(name, params as Record<string, unknown>, ctx.cwd, signal) }], details: undefined };

@@ -1,6 +1,7 @@
 import { constants } from "node:fs";
 import { lstat, open, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
+import ignore, { type Ignore } from "ignore";
 import { contained, controlStateRoots, deniedName, installationRoot, isControlState, nestedConfigPath, protectedCwd, skipDirectory } from "./file-authority.ts";
 
 const MAX_DEPTH = 32;
@@ -8,9 +9,10 @@ const MAX_ENTRIES = 10_000;
 const MAX_FILE_BYTES = 1_048_576;
 const MAX_OUTPUT_BYTES = 65_536;
 const MAX_LIMIT = 1_000;
+const INCOMPLETE_WARNING = "Warning: incomplete search; one or more subtrees were skipped because an ignore policy could not be safely read.";
 type Input = Record<string, unknown>;
 type Kind = "grep" | "find" | "ls";
-type IgnoreRule = { base: string; pattern: string; directory: boolean; anchored: boolean };
+type IgnorePolicy = { base: string; matcher: Ignore };
 
 function integer(value: unknown, fallback: number, max: number, name: string): number {
 	if (value === undefined) return fallback;
@@ -60,28 +62,32 @@ async function safeRead(file: string, signal: AbortSignal): Promise<string | und
 	}
 }
 
-/** Positive, simple gitignore rules only. Unsupported syntax fails closed for that subtree. */
-function parseIgnore(content: string, base: string): IgnoreRule[] | undefined {
-	const rules: IgnoreRule[] = [];
-	for (const raw of content.split(/\r?\n/)) {
-		if (!raw || raw.startsWith("#")) continue;
-		if (raw.startsWith("!") || raw.includes("\\") || /[\[\]{}]/.test(raw) || raw !== raw.trim()) return undefined;
-		const directory = raw.endsWith("/");
-		const pattern = raw.replace(/^\//, "").replace(/\/$/, "");
-		if (!pattern || pattern.includes("//") || pattern === ".." || pattern.startsWith("../")) return undefined;
-		rules.push({ base, pattern, directory, anchored: raw.startsWith("/") || pattern.includes("/") });
-	}
-	return rules;
+/** Each policy stays relative to its own directory; deeper matching rules take precedence. */
+function parseIgnore(content: string, base: string): IgnorePolicy {
+	return { base, matcher: ignore({ ignorecase: false }).add(content) };
 }
 
-function ignored(relative: string, directory: boolean, rules: IgnoreRule[]): boolean {
-	for (const rule of rules) {
-		if (rule.directory && !directory) continue;
-		const local = path.posix.relative(rule.base || ".", relative);
-		if (local === ".." || local.startsWith("../")) continue;
-		if (rule.anchored ? path.matchesGlob(local, rule.pattern) : local.split("/").some((part) => path.matchesGlob(part, rule.pattern))) return true;
+function ignored(relative: string, directory: boolean, policies: IgnorePolicy[]): boolean {
+	let excluded = false;
+	for (const policy of policies) {
+		const local = path.posix.relative(policy.base || ".", relative);
+		if (!local || local === ".." || local.startsWith("../")) continue;
+		const result = policy.matcher.test(directory ? `${local}/` : local);
+		if (result.ignored || result.unignored) excluded = result.ignored;
 	}
-	return false;
+	return excluded;
+}
+
+/** The combined policy already admitted this directory. Keep that decision in each
+ * matcher so its recursive parent check cannot hide descendants after a nested exception.
+ * Clone only affected matchers: reopening one branch must not change its siblings. */
+function enterDirectory(relative: string, policies: IgnorePolicy[]): IgnorePolicy[] {
+	return policies.map((policy) => {
+		const local = path.posix.relative(policy.base || ".", relative);
+		if (!local || !policy.matcher.test(`${local}/`).ignored) return policy;
+		const literal = local.replace(/[\\*?[\]#! ]/g, "\\$&");
+		return { base: policy.base, matcher: ignore({ ignorecase: false }).add(policy.matcher).add(`!/${literal}/`) };
+	});
 }
 
 export async function secureSearch(kind: Kind, input: Input, cwd: string, signal: AbortSignal): Promise<string> {
@@ -118,14 +124,16 @@ export async function secureSearch(kind: Kind, input: Input, cwd: string, signal
 	}
 	// An explicit ignored target must fail, rather than bypassing the directory walk.
 	let ancestor = root;
-	let ancestorRules: IgnoreRule[] = [];
+	let ancestorRules: IgnorePolicy[] = [];
 	for (const part of ["", ...relativeTarget.split(path.sep).filter(Boolean)]) {
 		if (part) {
 			ancestor = path.join(ancestor, part);
 			const stat = await lstat(ancestor);
-			if (ignored(path.relative(root, ancestor).replaceAll(path.sep, "/"), stat.isDirectory(), ancestorRules)) {
+			const relative = path.relative(root, ancestor).replaceAll(path.sep, "/");
+			if (ignored(relative, stat.isDirectory(), ancestorRules)) {
 				throw new Error("Search denied: ignored target");
 			}
+			if (stat.isDirectory()) ancestorRules = enterDirectory(relative, ancestorRules);
 		}
 		if (!(await lstat(ancestor)).isDirectory()) continue;
 		const ignorePath = path.join(ancestor, ".gitignore");
@@ -138,9 +146,8 @@ export async function secureSearch(kind: Kind, input: Input, cwd: string, signal
 			throw new Error("Search denied: unsafe ignore policy");
 		}
 		const content = await safeRead(ignorePath, signal);
-		const parsed = content === undefined ? undefined : parseIgnore(content, path.relative(root, ancestor).replaceAll(path.sep, "/"));
-		if (!parsed) throw new Error("Search denied: unsupported ignore policy");
-		ancestorRules = ancestorRules.concat(parsed);
+		if (content === undefined) throw new Error("Search denied: unreadable ignore policy");
+		ancestorRules = ancestorRules.concat(parseIgnore(content, path.relative(root, ancestor).replaceAll(path.sep, "/")));
 	}
 	const targetStat = await lstat(target);
 	if (targetStat.isSymbolicLink() || (!targetStat.isDirectory() && (!targetStat.isFile() || targetStat.nlink !== 1))) {
@@ -152,9 +159,10 @@ export async function secureSearch(kind: Kind, input: Input, cwd: string, signal
 	const output: string[] = [];
 	let bytes = 0;
 	let visited = 0;
+	let skippedPolicy = false;
 	function add(line: string): boolean {
 		const formatted = line.slice(0, 2048);
-		if (output.length >= limit || bytes + Buffer.byteLength(formatted) + 1 > MAX_OUTPUT_BYTES) return false;
+		if (output.length >= limit || bytes + Buffer.byteLength(formatted) + 1 > MAX_OUTPUT_BYTES - Buffer.byteLength(INCOMPLETE_WARNING) - 1) return false;
 		output.push(formatted);
 		bytes += Buffer.byteLength(formatted) + 1;
 		return true;
@@ -181,21 +189,25 @@ export async function secureSearch(kind: Kind, input: Input, cwd: string, signal
 		}
 	}
 
-	async function walk(dir: string, relative: string, depth: number, inherited: IgnoreRule[]): Promise<void> {
+	async function walk(dir: string, relative: string, depth: number, inherited: IgnorePolicy[]): Promise<void> {
 		if (signal.aborted) throw new Error("Search cancelled");
 		if (depth > MAX_DEPTH || output.length >= limit) return;
-		let rules = inherited;
+		let rules = depth > 0 ? enterDirectory(relative, inherited) : inherited;
 		const entries = (await readdir(dir, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name, "en"));
 		const ignore = entries.find((entry) => entry.name === ".gitignore");
-		if (ignore) {
+		if (ignore && depth > 0) {
 			const ignorePath = path.join(dir, ignore.name);
 			const stat = await lstat(ignorePath);
-			if (stat.isSymbolicLink() || !stat.isFile() || stat.nlink !== 1 || !contained(root, await realpath(ignorePath))) return;
+			if (stat.isSymbolicLink() || !stat.isFile() || stat.nlink !== 1 || !contained(root, await realpath(ignorePath))) {
+				skippedPolicy = true;
+				return;
+			}
 			const content = await safeRead(ignorePath, signal);
-			if (content === undefined) return;
-			const parsed = parseIgnore(content, relative.replaceAll(path.sep, "/"));
-			if (!parsed) return;
-			rules = inherited.concat(parsed);
+			if (content === undefined) {
+				skippedPolicy = true;
+				return;
+			}
+			rules = rules.concat(parseIgnore(content, relative.replaceAll(path.sep, "/")));
 		}
 		for (const entry of entries) {
 			if (signal.aborted) throw new Error("Search cancelled");
@@ -223,5 +235,6 @@ export async function secureSearch(kind: Kind, input: Input, cwd: string, signal
 
 	if (targetStat.isDirectory()) await walk(target, relativeTarget.replaceAll(path.sep, "/"), 0, ancestorRules);
 	else await fileResult(target, relativeTarget.replaceAll(path.sep, "/"));
-	return output.join("\n") || "No results";
+	const result = output.join("\n") || (skippedPolicy ? "No results in searched files" : "No results");
+	return skippedPolicy ? `${INCOMPLETE_WARNING}\n${result}` : result;
 }
