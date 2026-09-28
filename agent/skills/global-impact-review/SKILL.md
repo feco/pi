@@ -1,27 +1,23 @@
 ---
 name: global-impact-review
-description: Review end-to-end impacts after implementation, including missed dependencies, existing data, format compatibility, rollout, and user follow-ups outside code. Used by the global-reviewer in the implement workflow.
+description: Challenge a proposed direction against the broader repository or monorepo before plan approval, including after grill-with-doc. Check existing capabilities, ownership, sources of truth, and architectural fit.
 ---
 
-# Global impact review
+# Global direction check
 
-Check whether a locally correct implementation delivers the intended behavior across the existing system. Work read-only; the orchestrator owns repairs and user decisions. Ground findings in repository evidence, distinguishing confirmed omissions from conditional risks. Prefer the smallest sufficient correction over speculative new requirements.
+Ask **“Knowing the broader system, is this the right work to do, in the right place?”**, not merely “Can this component implement the feature?” The orchestrator owns this check after clarification and before plan approval. Use `global-reviewer` only when deeper read-only investigation is useful. No implementation or finished diff is required.
 
-1. **Establish scope.** Read the user goal, approved scope and decisions, change summary/diff, verification results, and applicable repository instructions. Identify missing context explicitly; ask the orchestrator for material inputs rather than assuming them. Done when the intended outcome and review limits are clear.
-2. **Trace beyond the diff.** Inspect actual entry points, producers, transformations, persistence, consumers, and user-facing outputs, including relevant unchanged paths. Follow repository contracts, documentation, and tests rather than relying only on the implementation summary. Check each applicable dimension below; mark others not applicable with a short reason:
-   - Existing versus newly created data: schema/version compatibility, backfill, reindexing, reingestion, stale caches, partial updates, and repeatability.
-   - Supported variants: other document formats, providers, clients, import paths, configurations, and legacy records; missing metadata and fallback behavior.
-   - End-to-end contracts: API/schema changes, downstream consumers, ownership, permissions, and whether required information survives every transformation.
-   - Delivery and operation: deployment ordering, mixed versions, migration/rollback, failure recovery, observability, and material resource/cost implications.
-   - Product completion: documentation, user communication, manual operations, acceptance coverage, and follow-up work needed outside this code change.
+1. **Establish the outcome.** Read the user goal, settled decisions, proposed approach, and applicable repository instructions. Treat an earlier grilling session as input, not proof that the proposed direction is sound. Distinguish the desired outcome from the suggested solution. Done when the outcome, constraints, and remaining assumptions are explicit.
+2. **Step back across the repository.** Inspect relevant services/modules, entry points, end-to-end flows, contracts, stores, ownership, and architectural decisions, including outside the proposed change area. Scale the investigation to the decision: follow relevant connections rather than exhaustively reading the monorepo. Check:
+   - **Reuse:** Does another component already provide this capability? Could an existing tool, contract, or workflow solve the problem with less change?
+   - **Ownership:** Is this the right layer or service? Are we fixing the underlying problem or compensating for a mistake elsewhere?
+   - **Consistency:** Would the approach duplicate state, sources of truth, business rules, contracts, or user workflows? Does it fit the broader product and recorded architecture?
+   - **Completeness:** Does the proposed flow deliver the outcome across supported inputs, configurations, producers, and consumers, rather than only the local happy path?
+   - **Feasibility:** Do existing data, compatibility, permissions, migration/rollback, deployment ordering, or required manual operations materially change the approach?
 
-   Example: adding PDF text positions requires checking extraction through retrieval/display, whether stored chunks lack positions and need reingestion, and how already-supported non-PDF inputs behave. It does not imply adding new formats or running a production reingestion.
+   Ground conclusions in inspected paths and contracts. Mark uninspected areas and uncertain ownership as limits, not evidence that no existing capability or conflict exists. Done when applicable questions have evidence-backed answers and material unknowns are explicit.
+3. **Recommend a direction.** Return a short conclusion: **proceed**, **reuse**, **redirect**, or **clarify**. Include the supporting paths/flows, the smallest sufficient approach and its tradeoffs, material decisions or blockers, and investigation limits. Carry necessary migration, rollout, documentation, and user actions into the proposed plan, distinguishing required prerequisites from optional later work. Do not expand scope or execute operations automatically.
 
-   Done when relevant flows and dimensions have an evidence-backed disposition, with uninspected areas identified as limits rather than declared safe.
-3. **Classify and report.** Return concise sections:
-   - **Coverage:** traced flows, inspected file paths, applicable dimensions, and review limits.
-   - **Corrections:** high-confidence omissions necessary for the approved behavior, with evidence (path and symbol/line), affected scenario, consequence, smallest repair, and verification needed.
-   - **Decisions/blockers:** unresolved product/architecture choices or prerequisites that prevent safe completion; state the question and recommended option for the user.
-   - **User follow-ups:** operational actions, conditional cautions, or future stories outside the approved code scope. For each, state evidence, why/when it matters, the next action, and whether it is required before rollout or optional later. Mark uncertainty and unknown ownership explicitly.
+   The orchestrator incorporates this conclusion into the existing plan-approval step; there is no separate approval ceremony. Reopen settled decisions only when concrete repository evidence changes their basis. Done when the user can approve a coherent approach, with required follow-ups and material unknowns visible.
 
-   Use “none” for empty sections. Keep pre-existing issues separate unless this change makes them relevant. A necessary migration or rollout prerequisite belongs among blockers when deferring it would make delivery unsafe; calling it a follow-up must not hide that dependency. Suggest actions, but do not execute migrations, create tickets, or expand scope. Done when every finding has a disposition and the orchestrator can distinguish code repairs from user decisions and final-message reminders.
+After implementation, the normal code reviewer checks delivery against the approved direction and concrete downstream consequences. Repeat this broader direction check only if new evidence materially challenges the approach.
