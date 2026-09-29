@@ -17,7 +17,7 @@ The extension exposes tools named `goulven_*`. Their parameters are self-documen
 | `goulven_process` | Generate skeleton wiki pages for unprocessed notes. **Rebuilds the index after generating pages.** | — (rebuilds it) |
 | `goulven_search` | Find pages/notes matching a query (wiki + raw, ranked). | ✅ yes |
 | **`goulven_read`** | **Open a page/note by path. Pass a result's `Path` field from `goulven_search` verbatim — the tool resolves it under the wiki or raw-notes root for you. Always follow up a search with `goulven_read` before answering.** | no |
-| `goulven_write` | **Create a new wiki page** under `wiki/{work,personal}/{sources,entities,concepts,syntheses,analyses}/`. Refuses overwrites; auto-injects frontmatter; rebuilds index. | no |
+| `goulven_write` | **Create a new wiki page** under `wiki/{work,personal,jdr}/{sources,entities,concepts,syntheses,analyses}/`. Refuses overwrites; auto-injects frontmatter; rebuilds index. | no |
 | `goulven_edit` | **Edit an existing wiki page** with exact-text replacements. Refuses creating new files; refreshes `updated`; rebuilds index. | no |
 | `goulven_status` | Quick stats on the wiki (includes whether an index exists). | no |
 
@@ -45,7 +45,7 @@ Use `goulven_write` when you need a page that does **not** exist yet (entity, co
 The `path` must be exactly 4 segments:
 
 ```
-wiki/{work,personal}/{sources,entities,concepts,syntheses,analyses}/{filename}.md
+wiki/{work,personal,jdr}/{sources,entities,concepts,syntheses,analyses}/{filename}.md
 ```
 
 Examples:
@@ -134,12 +134,16 @@ When the user asks a question:
 
 ## Classification rules
 
-Tag every page `work` or `personal`, decided in this order:
-1. Frontmatter `tags:` containing `work` or `personal`.
-2. Else parent folder (`work/` or `personal/`).
+Tag every page `work`, `personal`, or `jdr`, decided in this order:
+1. Tags — frontmatter `tags:` or inline hashtags: `#jdr` → jdr (**checked first, always wins**), `#elia` → work, `#perso` → personal.
+2. Else parent folder (`work/`, `personal/`, or `jdr/`).
 3. Else default to `personal`.
 
-Keep work and personal pages in their respective `wiki/work/` and `wiki/personal/` trees. Never blend them in a single page.
+Keep each classification in its own tree: `wiki/work/`, `wiki/personal/`, and `wiki/jdr/`. Never blend them in a single page.
+
+### 🎲 JDR (RPG) isolation
+
+RPG / jeu de rôle content (`#jdr`) forms a self-contained sub-wiki in `wiki/jdr/` with its own sources, entities, concepts, and analyses. Never merge JDR content (characters, campaigns, sessions, world lore) into personal or work pages. Cross-linking within `wiki/jdr/` is encouraged; links from JDR pages to work/personal pages are not.
 
 ## Page-writing conventions
 

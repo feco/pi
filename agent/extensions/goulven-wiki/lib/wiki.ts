@@ -77,6 +77,19 @@ export function generateWikiPages(
     }
   }
 
+  // Safety guard: never clobber an enriched source page with a fresh skeleton.
+  // goulven_process may re-run over notes that only *appear* changed (mtime
+  // noise on network mounts like rclone). If the existing page is already
+  // fleshed out (skeleton marker gone), keep it and let the agent update it
+  // with goulven_edit instead.
+  if (existsSync(sourcePath)) {
+    const existing = readFileSync(sourcePath, "utf-8");
+    if (!existing.includes("_This page summarizes the raw note above")) {
+      pages.push(sourceRelPath);
+      return pages;
+    }
+  }
+
   // Now build the source page with backlinks to generated pages
   const sourcePage = buildSourcePage(title, file, frontmatter, body, linkedEntities, linkedConcepts);
   writeFileSync(sourcePath, sourcePage, "utf-8");

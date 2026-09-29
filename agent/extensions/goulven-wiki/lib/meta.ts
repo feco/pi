@@ -1,6 +1,14 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { GoulvenState } from "./config.js";
+import { ALLOWED_CLASSIFICATIONS, ALLOWED_PAGE_TYPES } from "./validate.js";
+
+/** Emoji shown per classification in the generated index.md. */
+const CLASSIFICATION_EMOJIS: Record<string, string> = {
+  work: "💼",
+  personal: "🏠",
+  jdr: "🎲",
+};
 
 /**
  * Quality helpers inspired by nashsu/llm_wiki:
@@ -59,15 +67,15 @@ export function rebuildIndex(outputDir: string, state: GoulvenState): void {
   const byClass: Record<string, WikiPageMeta[]> = {};
   for (const p of pages) (byClass[p.classification] ??= []).push(p);
 
-  for (const cls of ["work", "personal"]) {
+  for (const cls of ALLOWED_CLASSIFICATIONS) {
     const items = byClass[cls];
     if (!items || items.length === 0) continue;
-    index += `## ${cls === "work" ? "💼" : "🏠"} ${cls}\n\n`;
+    index += `## ${CLASSIFICATION_EMOJIS[cls] ?? "📄"} ${cls}\n\n`;
 
     const byType: Record<string, WikiPageMeta[]> = {};
     for (const p of items) (byType[p.type] ??= []).push(p);
 
-    for (const t of ["sources", "entities", "concepts", "syntheses", "analyses"]) {
+    for (const t of ALLOWED_PAGE_TYPES) {
       const typed = byType[t];
       if (!typed || typed.length === 0) continue;
       index += `### ${t}\n\n`;
@@ -102,10 +110,10 @@ export function appendLog(outputDir: string, entry: string): void {
 
 function collectWikiPages(wikiDir: string): WikiPageMeta[] {
   const results: WikiPageMeta[] = [];
-  for (const cls of ["work", "personal"]) {
+  for (const cls of ALLOWED_CLASSIFICATIONS) {
     const clsDir = join(wikiDir, cls);
     if (!existsSync(clsDir)) continue;
-    for (const pt of ["sources", "entities", "concepts", "syntheses", "analyses"]) {
+    for (const pt of ALLOWED_PAGE_TYPES) {
       const ptDir = join(clsDir, pt);
       if (!existsSync(ptDir)) continue;
       try {

@@ -48,8 +48,8 @@ export interface IndexEntry {
 export interface FileEntry {
   path: string;        // relative to inputDir
   mtimeMs: number;     // last modified timestamp
-  tags: string[];      // extracted tags (work, personal, etc.)
-  classified: "work" | "personal" | "unclassified";
+  tags: string[];      // extracted tags (work, personal, jdr, etc.)
+  classified: "work" | "personal" | "jdr" | "unclassified";
   processed: boolean;  // whether wiki pages have been generated
   wikiPages: string[]; // paths to generated wiki pages (relative to outputDir)
 }
