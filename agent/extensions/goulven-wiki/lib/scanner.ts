@@ -23,20 +23,27 @@ export function scanInputDir(
 
     const existing = state.files[relPath];
 
+    // Always re-classify: classification rules evolve (e.g. the jdr tree was
+    // added after the wiki already existed), so tags cached in existing state
+    // entries can be stale. Classification only reads file content, which the
+    // indexer reads again anyway — the cost is negligible.
+    const entry = classifyFile(inputDir, absPath, relPath, mtimeMs);
+
     if (!existing) {
       // New file
-      const entry = classifyFile(inputDir, absPath, relPath, mtimeMs);
       newFiles.push(entry);
       allFiles.push(entry);
     } else if (existing.mtimeMs !== mtimeMs) {
       // Changed file
-      const entry = classifyFile(inputDir, absPath, relPath, mtimeMs);
       entry.processed = false; // re-process changed files
       entry.wikiPages = [];    // reset wiki pages
       changedFiles.push(entry);
       allFiles.push(entry);
     } else {
-      allFiles.push(existing);
+      // Unchanged: adopt the fresh classification, keep the processed flags
+      entry.processed = existing.processed;
+      entry.wikiPages = existing.wikiPages;
+      allFiles.push(entry);
     }
   }
 
