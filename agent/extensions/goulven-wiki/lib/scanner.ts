@@ -40,9 +40,13 @@ export function scanInputDir(
       changedFiles.push(entry);
       allFiles.push(entry);
     } else {
-      // Unchanged: adopt the fresh classification, keep the processed flags
+      // Unchanged: adopt the fresh classification, keep the processed flags.
+      // Write back into state directly — the caller only merges newFiles and
+      // changedFiles, so without this the fresh classification would be
+      // dropped and state would keep stale tags forever.
       entry.processed = existing.processed;
       entry.wikiPages = existing.wikiPages;
+      state.files[relPath] = entry;
       allFiles.push(entry);
     }
   }
