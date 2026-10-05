@@ -2,7 +2,7 @@
 name: global-reviewer
 description: Optional read-only investigator of proposed direction, existing capabilities, ownership, and monorepo architectural fit
 tools: read, grep, find, ls
-model: openai-codex/gpt-6-astra
+model: openai-codex/gpt-6.1-sol
 thinking: medium
 systemPromptMode: replace
 inheritProjectContext: true

@@ -394,11 +394,66 @@
           }
         },
         "type": "chat"
+      },
+      {
+        "id": "gpt-6.1-sol",
+        "name": "GPT-6.1 Sol",
+        "api": "openai-codex-responses",
+        "provider": "openai-codex",
+        "baseUrl": "https://chatgpt.com/backend-api",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 2,
+          "output": 10,
+          "cacheRead": 0.1,
+          "cacheWrite": 2.5,
+          "tiers": [
+            {
+              "inputTokensAbove": 272000,
+              "input": 4,
+              "output": 15,
+              "cacheRead": 0.2,
+              "cacheWrite": 5
+            }
+          ]
+        },
+        "contextWindow": 272000,
+        "maxTokens": 128000,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "low",
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": "max"
+        },
+        "compat": {
+          "supportsOpenAIGrammarTools": true,
+          "supportsAdditionalTools": true,
+          "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       }
     ],
-    "checkedAt": 1790590108956,
-    "lastModified": 1790253647000,
-    "etag": "W/\"33d4f9db141f788989850e1ac9cf899e\""
+    "checkedAt": 1791189166367,
+    "lastModified": 1790859108000,
+    "etag": "W/\"8003e3819641342fe5725e65d6bea0fb\""
   },
   "google": {
     "models": [
@@ -1269,9 +1324,9 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790590108914,
-    "lastModified": 1790253617000,
-    "etag": "W/\"7479536815e7f52fb17815e7f6031a76\""
+    "checkedAt": 1791189166391,
+    "lastModified": 1790859077000,
+    "etag": "W/\"1cb2f49be25b1ba3b871e356aa249893\""
   },
   "openai": {
     "models": [
@@ -2842,6 +2897,65 @@
         "type": "chat"
       },
       {
+        "id": "gpt-6.1-sol",
+        "name": "GPT-6.1 Sol",
+        "api": "openai-responses",
+        "provider": "openai",
+        "baseUrl": "https://api.openai.com/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 2,
+          "output": 10,
+          "cacheRead": 0.1,
+          "cacheWrite": 2.5,
+          "tiers": [
+            {
+              "inputTokensAbove": 272000,
+              "input": 4,
+              "output": 15,
+              "cacheRead": 0.2,
+              "cacheWrite": 5
+            }
+          ]
+        },
+        "contextWindow": 272000,
+        "maxTokens": 128000,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": "max"
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsOpenAIGrammarTools": true,
+          "supportsAdditionalTools": true,
+          "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true,
+          "supportsExplicitPromptCacheMode": true
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
         "id": "gpt-daybreak-blue-latest",
         "name": "Daybreak Blue",
         "api": "openai-responses",
@@ -3236,8 +3350,8 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790590109084,
-    "lastModified": 1790585244000,
-    "etag": "W/\"9cba152862b34a4403086e67e314c101\""
+    "checkedAt": 1791189166405,
+    "lastModified": 1790859106000,
+    "etag": "W/\"fb0676507807715be1bee3a7b774db1b\""
   }
 }

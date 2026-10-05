@@ -2,8 +2,8 @@
 name: test-reviewer
 description: Read-only reviewer for test quality against the TDD skill and repository standards
 tools: read, grep, find, ls, bash, contact_supervisor
-model: openai-codex/gpt-6-sol
-thinking: high
+model: openai-codex/gpt-6.1-sol
+thinking: medium
 systemPromptMode: replace
 inheritProjectContext: true
 inheritSkills: false

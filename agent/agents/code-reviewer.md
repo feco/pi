@@ -2,6 +2,8 @@
 name: code-reviewer
 description: Combined read-only reviewer for correctness, test quality, maintainability, and downstream delivery risks
 tools: read, grep, find, ls, bash, contact_supervisor
+model: openai-codex/gpt-6.1-sol
+thinking: medium
 systemPromptMode: replace
 inheritProjectContext: true
 inheritSkills: false

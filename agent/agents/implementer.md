@@ -1,9 +1,9 @@
 ---
 name: implementer
-description: Test-first implementation specialist owning tests and production code; gpt-6-sol high by default. The orchestrator may override model to openai-codex/gpt-6-sol:medium only for very simple tasks.
+description: Test-first implementation specialist owning tests and production code; gpt-6.1-sol with medium thinking by default.
 tools: read, grep, find, ls, bash, edit, write, contact_supervisor
-model: openai-codex/gpt-6-sol
-thinking: high
+model: openai-codex/gpt-6.1-sol
+thinking: medium
 systemPromptMode: append
 inheritProjectContext: true
 inheritSkills: false
