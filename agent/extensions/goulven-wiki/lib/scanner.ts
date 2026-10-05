@@ -23,20 +23,31 @@ export function scanInputDir(
 
     const existing = state.files[relPath];
 
+    // Always re-classify: classification rules evolve (e.g. the jdr tree was
+    // added after the wiki already existed), so tags cached in existing state
+    // entries can be stale. Classification only reads file content, which the
+    // indexer reads again anyway — the cost is negligible.
+    const entry = classifyFile(inputDir, absPath, relPath, mtimeMs);
+
     if (!existing) {
       // New file
-      const entry = classifyFile(inputDir, absPath, relPath, mtimeMs);
       newFiles.push(entry);
       allFiles.push(entry);
     } else if (existing.mtimeMs !== mtimeMs) {
       // Changed file
-      const entry = classifyFile(inputDir, absPath, relPath, mtimeMs);
       entry.processed = false; // re-process changed files
       entry.wikiPages = [];    // reset wiki pages
       changedFiles.push(entry);
       allFiles.push(entry);
     } else {
-      allFiles.push(existing);
+      // Unchanged: adopt the fresh classification, keep the processed flags.
+      // Write back into state directly — the caller only merges newFiles and
+      // changedFiles, so without this the fresh classification would be
+      // dropped and state would keep stale tags forever.
+      entry.processed = existing.processed;
+      entry.wikiPages = existing.wikiPages;
+      state.files[relPath] = entry;
+      allFiles.push(entry);
     }
   }
 
@@ -64,9 +75,10 @@ function findMarkdownFiles(dir: string): string[] {
 }
 
 /**
- * Classify a file as work, personal, or unclassified based on:
- * 1. Frontmatter tags (tags: [work] or tags: [personal])
- * 2. Parent folder name (work/ or personal/)
+ * Classify a file as work, personal, jdr, or unclassified based on:
+ * 1. Tags — frontmatter `tags:` and/or inline hashtags:
+ *    #jdr (RPG — checked first, always wins), #elia (work), #perso (personal)
+ * 2. Parent folder name (work/, personal/, or jdr/)
  */
 function classifyFile(
   inputDir: string,
@@ -75,9 +87,9 @@ function classifyFile(
   mtimeMs: number
 ): FileEntry {
   let tags: string[] = [];
-  let classified: "work" | "personal" | "unclassified" = "unclassified";
+  let classified: "work" | "personal" | "jdr" | "unclassified" = "unclassified";
 
-  // Try to read frontmatter
+  // Read frontmatter tags and inline hashtags.
   try {
     const content = readFileSync(absPath, "utf-8");
     const frontmatter = extractFrontmatter(content);
@@ -91,14 +103,27 @@ function classifyFile(
           .filter(Boolean);
       }
     }
+    // Inline hashtags are the user's primary tagging style (#jdr, #elia, #perso).
+    // Also accept "# elia" heading style (space after the hash). Merge findings
+    // into the tag list so they surface in status counts and generated
+    // source-page frontmatter.
+    const inlineTags = [...extractBody(content).matchAll(/(?:^|\s)#\s*(jdr|elia|perso)\b/gi)]
+      .map(m => m[1].toLowerCase());
+    for (const t of inlineTags) {
+      if (!tags.includes(t)) tags.push(t);
+    }
   } catch {
     // can't read file, skip classification
   }
 
-  // Check tags for work/personal
-  if (tags.includes("work")) {
+  // Classification: #jdr is checked FIRST so RPG notes are never merged into
+  // work/personal, even when a note carries several tags (e.g. "#perso #jdr").
+  // Mapping: jdr → jdr, elia → work, perso → personal.
+  if (tags.includes("jdr")) {
+    classified = "jdr";
+  } else if (tags.includes("work") || tags.includes("elia")) {
     classified = "work";
-  } else if (tags.includes("personal")) {
+  } else if (tags.includes("personal") || tags.includes("perso")) {
     classified = "personal";
   }
 
@@ -107,6 +132,7 @@ function classifyFile(
     const parentDir = basename(dirname(absPath)).toLowerCase();
     if (parentDir === "work") classified = "work";
     else if (parentDir === "personal") classified = "personal";
+    else if (parentDir === "jdr") classified = "jdr";
   }
 
   return {

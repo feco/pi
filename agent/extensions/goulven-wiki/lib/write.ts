@@ -22,7 +22,7 @@ export interface WriteResult {
  * - The requested path must start with "wiki/" and resolve inside outputDir.
  * - No ".." segments or symlink escapes are allowed.
  * - Only .md files are allowed.
- * - The path must be exactly 4 segments deep: wiki/{work,personal}/{type}/{filename}.md.
+ * - The path must be exactly 4 segments deep: wiki/{work,personal,jdr}/{type}/{filename}.md.
  * - The page type must be one of the allowed values.
  * - Existing files are never overwritten; the caller must use an edit tool instead.
  *

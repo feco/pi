@@ -1,7 +1,7 @@
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, join, normalize, resolve } from "node:path";
 
-export const ALLOWED_CLASSIFICATIONS = ["work", "personal"] as const;
+export const ALLOWED_CLASSIFICATIONS = ["work", "personal", "jdr"] as const;
 export const ALLOWED_PAGE_TYPES = ["sources", "entities", "concepts", "syntheses", "analyses"] as const;
 
 export type Classification = (typeof ALLOWED_CLASSIFICATIONS)[number];
@@ -21,7 +21,7 @@ export interface ValidatedWikiPath {
  * - Must be relative and start with "wiki/".
  * - No ".." segments.
  * - Must end with ".md".
- * - Must have exactly 4 segments: wiki/{work,personal}/{type}/{filename}.md.
+ * - Must have exactly 4 segments: wiki/{work,personal,jdr}/{type}/{filename}.md.
  * - Classification and page type must be in the allow lists.
  * - Resolved absolute path must stay inside ${outputDir}/wiki/.
  */
@@ -65,7 +65,7 @@ export function validateWikiPath(
     return {
       ok: false,
       error:
-        "Wiki page path must have exactly 4 segments: `wiki/{work,personal}/{sources,entities,concepts,syntheses,analyses}/{filename}.md`. " +
+        "Wiki page path must have exactly 4 segments: `wiki/{work,personal,jdr}/{sources,entities,concepts,syntheses,analyses}/{filename}.md`. " +
         `Received ${parts.length + 1} segments.`,
     };
   }

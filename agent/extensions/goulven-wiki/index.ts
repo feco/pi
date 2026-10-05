@@ -130,6 +130,7 @@ export default function (pi: ExtensionAPI) {
 
       const workFiles = allFiles.filter(f => f.classified === "work").length;
       const personalFiles = allFiles.filter(f => f.classified === "personal").length;
+      const jdrFiles = allFiles.filter(f => f.classified === "jdr").length;
       const unclassified = allFiles.filter(f => f.classified === "unclassified").length;
 
       let text = "## Scan Results\n\n";
@@ -139,6 +140,7 @@ export default function (pi: ExtensionAPI) {
       text += `| 📝 Changed | ${changedFiles.length} |\n`;
       text += `| 💼 Work | ${workFiles} |\n`;
       text += `| 🏠 Personal | ${personalFiles} |\n`;
+      text += `| 🎲 JDR | ${jdrFiles} |\n`;
       text += `| ❓ Unclassified | ${unclassified} |\n`;
 
       if (newFiles.length > 0) {
@@ -458,7 +460,7 @@ export default function (pi: ExtensionAPI) {
       path: Type.String({
         description:
           "Relative wiki page path, e.g. `wiki/work/entities/alice.md`. " +
-          "Must be exactly 4 segments: wiki/{work,personal}/{sources,entities,concepts,syntheses,analyses}/{filename}.md.",
+          "Must be exactly 4 segments: wiki/{work,personal,jdr}/{sources,entities,concepts,syntheses,analyses}/{filename}.md.",
       }),
       edits: Type.Array(
         Type.Object({
@@ -508,7 +510,7 @@ export default function (pi: ExtensionAPI) {
       path: Type.String({
         description:
           "Relative wiki page path, e.g. `wiki/work/entities/alice.md`. " +
-          "Must be exactly 4 segments: wiki/{work,personal}/{sources,entities,concepts,syntheses,analyses}/{filename}.md.",
+          "Must be exactly 4 segments: wiki/{work,personal,jdr}/{sources,entities,concepts,syntheses,analyses}/{filename}.md.",
       }),
       content: Type.String({
         description: "Markdown content for the new wiki page.",
@@ -554,6 +556,7 @@ export default function (pi: ExtensionAPI) {
       const allFiles = Object.values(state.files);
       const workFiles = allFiles.filter(f => f.classified === "work");
       const personalFiles = allFiles.filter(f => f.classified === "personal");
+      const jdrFiles = allFiles.filter(f => f.classified === "jdr");
       const unclassified = allFiles.filter(f => f.classified === "unclassified");
       const processed = allFiles.filter(f => f.processed);
 
@@ -583,6 +586,7 @@ export default function (pi: ExtensionAPI) {
       text += `| Total notes | ${allFiles.length} |\n`;
       text += `| 💼 Work notes | ${workFiles.length} |\n`;
       text += `| 🏠 Personal notes | ${personalFiles.length} |\n`;
+      text += `| 🎲 JDR notes | ${jdrFiles.length} |\n`;
       text += `| ❓ Unclassified | ${unclassified.length} |\n`;
       text += `| ✅ Processed | ${processed.length} |\n`;
       text += `| 📖 Wiki pages | ${wikiPageCount} |\n`;
@@ -596,6 +600,7 @@ export default function (pi: ExtensionAPI) {
           totalFiles: allFiles.length,
           workFiles: workFiles.length,
           personalFiles: personalFiles.length,
+          jdrFiles: jdrFiles.length,
           wikiPages: wikiPageCount,
         },
       };
