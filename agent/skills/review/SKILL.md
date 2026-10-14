@@ -60,7 +60,7 @@ Start broad, then inspect every human-written changed line:
 1. When Bash is available, use `git diff --stat`, `--name-status`, and the relevant diff command; otherwise use the orchestrator's scoped diff, index result and explicit untracked scope.
 2. Inspect the main behavior/design files first, then tests, callers, configuration, migrations, generated artifacts, dependency manifests, and lockfiles.
 3. Read enough surrounding code to validate each suspected issue. Search local callers, types, invariants, and tests where necessary.
-4. For each candidate, prove a concrete failure mode and check whether another changed or existing path handles it.
+4. For each candidate, check guards, callers, and invariants elsewhere in the codebase, including existing and changed paths, to confirm none already prevents the issue. Apply the evidence gate below before reporting.
 5. Load [references/correctness.md](references/correctness.md) for every review.
 6. Load [references/security.md](references/security.md) when the change touches trust boundaries, authentication/authorization, secrets, parsers, commands, files, network/data access, dependencies, CI, or deployment.
 7. Load [references/performance.md](references/performance.md) when it touches loops over variable input, queries, I/O, concurrency, caching, rendering, serialization, memory, or hot paths.
@@ -79,6 +79,16 @@ When headless Bash is denied, ask the orchestrator to run approved verification 
 - If verification was not run, say so. Lack of execution alone is not necessarily a defect.
 
 ## 5. Report
+
+### Evidence gate
+
+For each issue, provide at least one of:
+
+- A step-by-step reproduction showing how a user could encounter the bug: input or action → code path → expected vs. actual result.
+- Steps to exploit the vulnerability: who the attacker is, what they control, and what they gain.
+- A minimal failing test or input demonstrating the problem; run it when possible under the verification rules above, and state whether it was run.
+
+Before reporting, confirm that no existing guard, caller, or invariant elsewhere in the codebase already prevents the issue. Discard any issue for which you cannot provide at least one of these forms of evidence.
 
 Follow [references/output.md](references/output.md).
 

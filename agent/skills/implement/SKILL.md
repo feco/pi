@@ -1,33 +1,53 @@
 ---
 name: implement
-description: "Use before editing code to implement any requested feature, bug fix, refactor, ticket, spec, plan, or behavior change."
+description: "Implements a feature, bug fix, refactor, ticket, spec, or plan test-first, from clarifying questions to commit. Use before editing code to change behavior."
 ---
 
-Implement the work described by the user in the spec or tickets. Before changing code, discover the project's applicable implementation, testing, verification, documentation, and versioning instructions — they are authoritative throughout.
+You are the **orchestrator**: you decide, brief, run commands children cannot, and commit. One **writer** edits files at a time — a fresh `implementer` per slice, or you directly for a tiny change. Project instructions on implementation, testing, documentation and versioning take precedence; find them first.
 
-Work through these steps in order. Do not start a step until the previous step's completion criterion is met; "the tests will be added later" means the work is unproven, not mostly done.
+Each step ends on a **Done when** line; start the next step only then. Untested work is unproven, not mostly done.
 
-Use `implementer` for both tests and production code and `code-reviewer` for the combined independent review. Keep `test-reviewer` and `thermonuclear-reviewer` available for targeted specialist review, and `global-reviewer` for optional deeper investigation of the proposed direction. Reserve `delegate` for work outside these roles. For tiny changes you may edit files directly to save time and cost; this writer exception does not skip the automatic review step.
+## Agents
 
-1. **Mini-grill (chat only).** Before any implementation, including tiny direct edits, inspect the relevant repository context and ask 1–3 decision-focused questions with recommended answers. Find repository facts yourself. Reuse decisions already settled by the user, including an earlier `grill-with-doc`; ask only about remaining decisions, or ask the user to confirm your proposed scope when none remain. Wait for answers; follow up only on blockers. Keep this session in chat: create no grilling, spec, or plan document. The user initiates `grill-with-doc` for larger work; do not start it automatically. Done when the user has settled the questions and no blocking decision remains.
-2. **Global direction, visual plan, and approval.** Before presenting the plan, the orchestrator follows `global-impact-review` to challenge the proposed direction against relevant repository capabilities, ownership, flows, and architecture. Apply this after clarification, including after `grill-with-doc`; use its evidence-backed proceed/reuse/redirect/clarify conclusion to shape the plan. Scale investigation to the decision and expose material unknowns. Show a concise implementation plan with an ASCII visual of the affected flow or change, the intended red/green slices, verification, and required migration/rollout or user actions. Include any risk-triggered specialist review and its rationale. Wait for explicit approval before editing tests or production code or dispatching a writer. This gate runs once before the loop; return to it only if scope or a material decision changes. Done when the user approves the plan.
-3. **Red/green slices.** Dispatch one `implementer` authorized to own both tests and production code for the approved work. Follow the `tdd` skill and complete each vertical slice before starting the next:
-   1. The implementer writes exactly one behavior-focused test at a confirmed seam. Run the narrowest relevant RED command in the child if allowed; otherwise the child returns the test handoff and command, and the orchestrator runs it. Done when the observed result fails for the intended reason. Do not force tests when not relevant.
-   2. The same implementer makes that test pass with the minimum production-code change. Run the focused GREEN command in the child if allowed; otherwise the child returns the implementation handoff and command, and the orchestrator runs it. Done when the observed result passes and the change meets the full rules of the thermo-nuclear-code-quality-review skill. Follow `~/.pi/agent/GUARDRAILS.md` for headless evidence attribution. Implementer should report implementation that might need an ADR to add it later in the documentation, only if the change is significant enough and that decision is likely to need explanation later.
-   3. Repeat with the same writer for the next behavior only after the current slice is green.
+- `implementer` — tests and production code for one slice.
+- `code-reviewer` — the combined review every change gets, tiny ones included.
+- `thermonuclear-reviewer` / `test-reviewer` — specialist review for structural / test risk.
+- `global-reviewer` — optional deeper check of the direction in step 2.
+- `delegate` — work outside these roles.
 
-   When verification requires the orchestrator, the child ends its turn with a handoff instead of advancing past the unverified phase. Resume its latest returned run ID with the observed command result and the next authorized phase; preserve the writer's context across RED, GREEN, subsequent slices, and repairs. Advance from RED only on the intended failure and from GREEN only on a passing result; unexpected failures keep the writer on the current phase. Throughout implementation, hunt the code-judo move that deletes whole branches, helpers, or layers; keep files under 1k lines; never add special-case branches or one-off flags to unrelated or shared flows; prefer direct, boring code and reuse the existing canonical helper in the owning layer. Done when every planned slice is green.
-4. **Verify.** Run the project's required focused and full verification commands in an authorized session; the orchestrator runs commands denied to children and supplies results as parent evidence. Done when every command passes.
-5. **One combined review, with risk-triggered specialists.** After all slices are implemented and verified, dispatch one fresh `code-reviewer`, including for tiny direct edits. It covers correctness, test quality, maintainability, delivery against the approved direction, and concrete downstream consequences in one consolidated report.
+Each agent preloads its own skills. Scout with read-only agents and keep your own context for decisions.
 
-   Add independent targeted review for consequential security/auth changes, data migrations or persistent-format changes, public/cross-service contracts, or significant structural refactors. Select by blast radius, not line count. Use `thermonuclear-reviewer` for structural risks and `test-reviewer` for specialist test risks; for security/data/contracts use an available read-only reviewer with an explicit risk-focused brief. Keep configured models and thinking levels. Run independent reviews in parallel when useful; ordinary changes need only the combined reviewer. If a material risk emerges after planning, flag it and add the required review; return to plan approval only if scope or a material decision changes.
+## Steps
 
-   Give reviewers the user goal, approved scope and decisions, the global-direction conclusion and evidence/limits, repository location, exact change boundary (including relevant untracked files), resolved revisions, current index result, relevant scoped diff and verification results. Supply the diff inline or as an authorized readable artifact for headless reviewers. Review affected unchanged paths as necessary, without repeating the full direction investigation unless new evidence challenges it. Follow `~/.pi/agent/GUARDRAILS.md` for evidence attribution.
+1. **Mini-grill.** Read the relevant code, then ask 1–3 decision questions in chat, each with a recommended answer. Reuse decisions already settled, including in an earlier `grill-with-docs`; when none remain, ask the user to confirm scope. Stay in chat; the user starts `grill-with-docs` themselves for larger work.
+   **Done when** no blocking decision remains.
 
-   Wait for all dispatched reviewers, then synthesize and deduplicate their findings. Accept code repairs only for blockers and high-confidence defects or omissions needed to deliver the approved behavior. If accepted findings exist, have the same writer perform one repair pass covering tests and production code (resume the implementer, or repair directly for tiny direct edits), update tests when behavior changes, and rerun only the checks affected by the repair. Do not start another open-ended review cycle. Escalate scope expansions and unresolved product/architecture decisions to the user rather than implementing them automatically. Retain relevant operational actions, conditional cautions, and future stories separately as user follow-ups, not as rejected code findings; record each finding's disposition. Done when accepted findings are fixed, affected checks pass, and remaining follow-ups are retained for delivery. If a blocker remains, a reviewer could not complete, or reviewers disagree on a product or architecture decision, stop and ask the user.
-6. **Documentation.** Follow the project's documentation instructions and verify that its documentation reflects the latest change, updating it when needed. Done when the documentation is current.
-7. **Verification and handoff.** Summarize what changed and what was verified. Include retained planning and review follow-ups in the user-facing conclusion: action, why/when it matters, and whether required before rollout or optional later. Distinguish completed code from pending operational work; carry unresolved follow-ups into the final response after commit as well. Ask the user to check that everything is correct. Wait for confirmation. Done when follow-ups have been delivered and the user confirms.
-8. **Commit.** Commit the complete verified, reviewed, and documented change with a focused message.
-9. Suggest a push and pull request creation after a vertical slice is fully implemented.
+2. **Plan.** Run `global-impact-review` on the chosen direction and let its conclusion (proceed / reuse / redirect / clarify) shape the plan. Present an ASCII sketch of the affected flow, the red/green slices, verification commands, any specialist review with its reason, and any migration, rollout or user action. Come back here only if scope or a material decision changes.
+   **Done when** the user approves the plan. Edits start after approval.
 
-Manage your context with subagents. Each role-specific agent above already preloads its required skill; do not attach the skill again at dispatch. Use read-only agents for exploration and scoping, one writer at a time, and keep your context for orchestration, synthesis, and decisions.
+3. **Slices.** For each slice, dispatch a fresh `implementer` with the plan, the slice's behavior and the earlier slice commits, following `tdd`:
+   1. **Red** — one behavior test at a confirmed seam, failing for the intended reason. Skip when a test adds no value.
+   2. **Green** — the minimal production change that passes it and meets `thermo-nuclear-code-quality-review`. The implementer flags any decision worth an ADR.
+   3. **Commit** — you commit the slice's test and code only.
+
+   When the child cannot run a command, it returns the command; you run it and resume the same child with the result. Advance on the expected result only; anything else keeps the writer on the current phase.
+   **Done when** every slice is green and committed.
+
+4. **Verify.** Run the project's full verification. On failure, one fresh implementer makes one targeted repair, committed separately; a second failure stops the work and you report.
+   **Done when** every command passes.
+
+5. **Review.** Dispatch one fresh `code-reviewer` covering correctness, tests, maintainability, fit with the approved direction and downstream effects. Add a specialist when the blast radius calls for it — security/auth, data migrations or persisted formats, public or cross-service contracts, large structural refactors — using `thermonuclear-reviewer`, `test-reviewer`, or a read-only reviewer with a risk-focused brief. Brief reviewers with the goal, approved decisions and the step 2 conclusion.
+
+   Merge the findings. Fix only blockers and high-confidence defects against the approved behavior: one repair pass by a fresh implementer (or you, for a tiny change), then rerun the affected checks. Record every finding's disposition. Keep operational actions, cautions and future stories as follow-ups for the user. Scope changes, product or architecture decisions, an unfinished review or reviewer disagreement go to the user.
+   **Done when** accepted findings are fixed and their checks pass.
+
+6. **Documentation.** Update the docs the project's instructions call for.
+   **Done when** the docs describe the change.
+
+7. **Handoff.** Summarize what changed and how it was verified. List follow-ups with action, why or when it matters, and whether it is required before rollout. Separate finished code from pending operational work.
+   **Done when** the user confirms the result.
+
+8. **Commit** the review repairs and documentation.
+   **Done when** nothing from this work is uncommitted.
+
+9. **Push** the branch once, then suggest a pull request. Repeat open follow-ups in this final message.

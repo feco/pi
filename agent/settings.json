@@ -1,10 +1,9 @@
 {
-  "lastChangelogVersion": "1.0.2",
+  "lastChangelogVersion": "1.1.0",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-6.1-sol",
   "packages": [
     "npm:@juicesharp/rpiv-web-tools",
-    "npm:pi-mcp-extension",
     "npm:pi-subagents@0.46.0"
   ],
   "subagents": {
