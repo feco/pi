@@ -601,7 +601,7 @@ test("file authority requires explicit UI consent for outside and config paths b
 		// No edits array here: legacy prevalidation must not read installation files.
 		for (const target of [
 			"agent/extensions/confirm-writes.ts", "agent/extensions/lib/secure-search.ts",
-			"agent/bin/pi-subagent-safe", "agent/settings.json", "agent/agents/implementer.md",
+			"agent/bin/pi-subagent-safe", "agent/settings.json", "agent/agents/reviewer.md",
 		]) {
 			for (const toolName of ["edit", "write"]) await check(toolName, inputFor(toolName, target), "confirm", hasUI, consent, repo);
 		}

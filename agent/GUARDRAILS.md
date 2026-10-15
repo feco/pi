@@ -18,7 +18,7 @@ The child launcher `agent/bin/pi-subagent-safe` loads `block-env-reads.ts`, `con
 
 There is no blanket unlock: consent covers one operation, not later calls. Mutation dialogs show the tool, resolved target and complete proposed arguments. Refusal denies the operation. The target, mutation arguments and file authority are rechecked after consent. The read extension owns read dialogs; the mutation extension owns edit/write dialogs, so each request gets one confirmation.
 
-For example, creating `agent/agents/global-reviewer.md` requires confirmation in an interactive session; a child cannot grant itself that permission.
+For example, creating `agent/agents/reviewer.md` requires confirmation in an interactive session; a child cannot grant itself that permission.
 
 ## Subagent coordination
 
@@ -59,11 +59,6 @@ Linked, nonregular, binary, or oversized ignore policies remain fail-closed: an 
 
 Limits: depth 32, 10,000 inspected entries, 1 MiB per file, 1,000 output lines/entries, 64 KiB output and 10 context lines. Large/binary files are skipped; limits can produce partial results. Search traversal exclusions do not automatically forbid direct access to ordinary source files.
 
-## Headless evidence handoff
-
-For change-dependent child work, the orchestrator supplies resolved revisions and a relevant scoped Git diff (inline or in an ordinary authorized artifact), explicitly identifies untracked files in scope, and supplies the current index result plus relevant verification commands, exit status and output. Do not route evidence through protected `.pi-subagents` paths. Children attribute parent-supplied evidence, distinguish it from checks they ran, and report unavailable facts as unknown rather than inventing Git or test results.
-
-A read-only brief includes “Review only. Do not modify files.” on its own line and omits writer acceptance. When child Bash is denied, the orchestrator runs RED/GREEN and verification commands and supplies their outcomes to the next phase; see the role/skill instructions for phase boundaries.
 
 ## Limits and activation
 

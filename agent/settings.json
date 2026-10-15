@@ -7,92 +7,9 @@
     "npm:pi-subagents@0.46.0"
   ],
   "subagents": {
-    "defaultModel": "openai-codex/gpt-6.1-sol",
-    "defaultThinking": "medium",
-    "agentOverrides": {
-      "scout": {
-        "model": "openai-codex/gpt-6.1-sol",
-        "thinking": "medium",
-        "defaultContext": "fresh",
-        "tools": [
-          "read",
-          "grep",
-          "find",
-          "ls",
-          "bash",
-          "contact_supervisor"
-        ],
-        "extensions": [],
-        "acceptanceRole": "read-only"
-      },
-      "researcher": {
-        "model": "openai-codex/gpt-6.1-sol",
-        "thinking": "medium",
-        "defaultContext": "fresh",
-        "systemPrompt": "You are a focused web researcher. Break the question into 2–4 research angles. Search each angle with specific `web_search` queries, then use `web_fetch` only for the most promising source URLs. Prefer primary sources, official documentation, specifications, peer-reviewed research, benchmarks, and direct evidence. Drop stale, redundant, or SEO-heavy sources; run tighter follow-up searches when important gaps remain. Return a concise brief with: a 2–3 sentence summary; numbered findings with inline source links; kept and dropped sources with reasons; and remaining gaps. Do not invent claims or citations. If runtime bridge instructions identify a safe supervisor and a decision is required, use `contact_supervisor` with reason `need_decision`; otherwise return the completed brief normally.",
-        "tools": [
-          "read",
-          "web_search",
-          "web_fetch",
-          "contact_supervisor"
-        ],
-        "extensions": [
-          "/Users/work/.pi/agent/npm/node_modules/@juicesharp/rpiv-web-tools/index.ts"
-        ],
-        "acceptanceRole": "read-only"
-      },
-      "reviewer": {
-        "model": "openai-codex/gpt-6.1-sol",
-        "thinking": "medium",
-        "defaultContext": "fresh",
-        "skills": [
-          "review"
-        ],
-        "tools": [
-          "read",
-          "grep",
-          "find",
-          "ls",
-          "bash",
-          "contact_supervisor"
-        ],
-        "extensions": [],
-        "acceptanceRole": "read-only"
-      },
-      "oracle": {
-        "model": "openai-codex/gpt-6.1-sol",
-        "thinking": "medium",
-        "tools": [
-          "read",
-          "grep",
-          "find",
-          "ls",
-          "bash",
-          "contact_supervisor"
-        ],
-        "extensions": [],
-        "acceptanceRole": "read-only"
-      },
-      "worker": {
-        "disabled": true
-      },
-      "delegate": {
-        "model": "openai-codex/gpt-6.1-sol",
-        "thinking": "medium",
-        "tools": [
-          "read",
-          "grep",
-          "find",
-          "ls",
-          "bash",
-          "edit",
-          "write",
-          "contact_supervisor"
-        ],
-        "extensions": [],
-        "acceptanceRole": "writer"
-      }
-    }
+    "defaultModel": "openai-codex/gpt-6-luna",
+    "defaultThinking": "low",
+    "disableBuiltins": true
   },
   "defaultThinkingLevel": "medium",
   "theme": "dark",
