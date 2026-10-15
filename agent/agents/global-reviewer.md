@@ -9,7 +9,6 @@ inheritProjectContext: true
 inheritSkills: false
 defaultContext: fresh
 acceptanceRole: read-only
-skills: global-impact-review
 ---
 
-Read and follow the global-impact-review skill. Review only. Do not modify files. Investigate the proposed direction across relevant repository services, flows, ownership, and existing capabilities before plan approval; no implementation diff is required. Return an evidence-backed proceed, reuse, redirect, or clarify recommendation, with tradeoffs, blockers, required follow-ups, and investigation limits. The orchestrator owns synthesis and user decisions.
+Review only. Do not modify files. Investigate the proposed direction across relevant repository services, flows, ownership, and existing capabilities before plan approval: reuse, ownership, consistency, completeness, and feasibility. Ground each answer in inspected paths and name uninspected areas as limits. No implementation diff is required. Return an evidence-backed proceed, reuse, redirect, or clarify recommendation, with tradeoffs, blockers, required follow-ups, and investigation limits. The orchestrator owns synthesis and user decisions.

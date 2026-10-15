@@ -1,53 +1,63 @@
 ---
 name: implement
-description: "Implements a feature, bug fix, refactor, ticket, spec, or plan test-first, from clarifying questions to commit. Use before editing code to change behavior."
+description: "Implements a feature, bug fix, refactor, ticket, spec, or plan test-first, from shared understanding to a verified, reviewed, committed change. Use before editing code to change behavior."
 ---
 
-You are the **orchestrator**: you decide, brief, run commands children cannot, and commit. One **writer** edits files at a time — a fresh `implementer` per slice, or you directly for a tiny change. Project instructions on implementation, testing, documentation and versioning take precedence; find them first.
+# Implement
+
+Take a change from a shared understanding to verified, reviewed, committed code. Project instructions on implementation, testing, documentation, versioning, and Git take precedence over this skill; read them first.
 
 Each step ends on a **Done when** line; start the next step only then. Untested work is unproven, not mostly done.
 
-## Agents
+## Related skills
 
-- `implementer` — tests and production code for one slice.
-- `code-reviewer` — the combined review every change gets, tiny ones included.
-- `thermonuclear-reviewer` / `test-reviewer` — specialist review for structural / test risk.
-- `global-reviewer` — optional deeper check of the direction in step 2.
-- `delegate` — work outside these roles.
+Read these files when a step calls for them; don't assume they are already loaded.
 
-Each agent preloads its own skills. Scout with read-only agents and keep your own context for decisions.
+- [grill](../grill/SKILL.md) and [wayfinder](../wayfinder/SKILL.md): reaching a shared understanding.
+- [tdd](../tdd/SKILL.md): the red → green loop and what a good test is.
+- [thermo-nuclear-code-quality-review](../thermo-nuclear-code-quality-review/SKILL.md) and [review/references/clarity.md](../review/references/clarity.md): the code standard to write and simplify to.
+- [verify](../verify/SKILL.md): proving the change works.
+- [review](../review/SKILL.md): the final review.
+- [technical-writing](../technical-writing/SKILL.md) and [unslop](../unslop/SKILL.md): every piece of prose.
+
+## Writing
+
+Commit messages, documentation, and the final summary follow `technical-writing` and `unslop`.
 
 ## Steps
 
-1. **Mini-grill.** Read the relevant code, then ask 1–3 decision questions in chat, each with a recommended answer. Reuse decisions already settled, including in an earlier `grill-with-docs`; when none remain, ask the user to confirm scope. Stay in chat; the user starts `grill-with-docs` themselves for larger work.
-   **Done when** no blocking decision remains.
+1. **Understand and plan.** Read the relevant code, then size the work:
+   - **Tiny** (one behavior, obvious fix): confirm the scope in one line.
+   - **Normal:** reuse the decisions of an earlier `grill` session when they settle the path forward. Otherwise, run `grill` first.
+   - **Large** (several open decisions or unknowns): run `wayfinder` and stop. Implement its tickets later, one session each.
 
-2. **Plan.** Run `global-impact-review` on the chosen direction and let its conclusion (proceed / reuse / redirect / clarify) shape the plan. Present an ASCII sketch of the affected flow, the red/green slices, verification commands, any specialist review with its reason, and any migration, rollout or user action. Come back here only if scope or a material decision changes.
+   Unless a `grill` session already checked the direction, step back across the repository: does another component already provide this, is this the right layer or service, and would it duplicate state, rules, or contracts? Ground the answer in inspected paths.
+
+   Make sure the work happens on a branch and the working tree holds no unrelated changes. Then present the plan: an ASCII sketch of the affected flow, the slices with their seams, the verification commands, and any migration, rollout, or user action.
    **Done when** the user approves the plan. Edits start after approval.
 
-3. **Slices.** For each slice, dispatch a fresh `implementer` with the plan, the slice's behavior and the earlier slice commits, following `tdd`:
-   1. **Red** — one behavior test at a confirmed seam, failing for the intended reason. Skip when a test adds no value.
-   2. **Green** — the minimal production change that passes it and meets `thermo-nuclear-code-quality-review`. The implementer flags any decision worth an ADR.
-   3. **Commit** — you commit the slice's test and code only.
+2. **Slices.** Before the first slice, read `tdd`, the repository's code standards, and the standards in `thermo-nuclear-code-quality-review`, so the code meets the review bar on the first pass. For each slice:
+   1. **Red:** one behavior test at the slice's seam, failing for the intended reason. Skip only when a test adds no value, and say why.
+   2. **Green:** the minimal production change that passes it.
+   3. **Simplify:** remove duplication and needless complexity, guided by the Preferred Remedies in `thermo-nuclear-code-quality-review`. Leave the tests untouched; if a test must change, the behavior changed, so go back to red. Rerun the tests.
+   4. **Commit:** run the fast checks (format, lint, type check, and the tests near the change), then commit the slice's test and code only.
 
-   When the child cannot run a command, it returns the command; you run it and resume the same child with the result. Advance on the expected result only; anything else keeps the writer on the current phase.
-   **Done when** every slice is green and committed.
+   After the last slice, run one simplify pass over the whole diff to catch duplication between slices, and commit it.
+   **Done when** every slice is green, simplified, and committed.
 
-4. **Verify.** Run the project's full verification. On failure, one fresh implementer makes one targeted repair, committed separately; a second failure stops the work and you report.
-   **Done when** every command passes.
+3. **Verify.** Follow `verify`: the required checks, then the changed behavior in the running software. On failure, loop back.
+   **Done when** every required check passes and the changed behavior has been seen working.
 
-5. **Review.** Dispatch one fresh `code-reviewer` covering correctness, tests, maintainability, fit with the approved direction and downstream effects. Add a specialist when the blast radius calls for it — security/auth, data migrations or persisted formats, public or cross-service contracts, large structural refactors — using `thermonuclear-reviewer`, `test-reviewer`, or a read-only reviewer with a risk-focused brief. Brief reviewers with the goal, approved decisions and the step 2 conclusion.
+4. **Documentation.** Update the docs the project's instructions call for. When the project keeps decision records (ADRs) and the work made a decision worth one, write it. Commit.
+   **Done when** the docs describe the change and are committed.
 
-   Merge the findings. Fix only blockers and high-confidence defects against the approved behavior: one repair pass by a fresh implementer (or you, for a tiny change), then rerun the affected checks. Record every finding's disposition. Keep operational actions, cautions and future stories as follow-ups for the user. Scope changes, product or architecture decisions, an unfinished review or reviewer disagreement go to the user.
-   **Done when** accepted findings are fixed and their checks pass.
+5. **Review.** Review the whole diff with fresh context, following `review`, and give it the goal, the approved plan, and the direction check from step 1. On a P0–P2 defect, loop back. Scope changes and product or architecture decisions go to the user instead.
+   **Done when** the review reports no P0–P2 defect.
 
-6. **Documentation.** Update the docs the project's instructions call for.
-   **Done when** the docs describe the change.
+   **Loop back:** treat each defect found in step 3 or 5 as a new slice in step 2, starting with a test that reproduces it, then run steps 3 to 5 again. Stop and report when the same defect returns after a fix, or after 3 loops.
 
-7. **Handoff.** Summarize what changed and how it was verified. List follow-ups with action, why or when it matters, and whether it is required before rollout. Separate finished code from pending operational work.
-   **Done when** the user confirms the result.
-
-8. **Commit** the review repairs and documentation.
-   **Done when** nothing from this work is uncommitted.
-
-9. **Push** the branch once, then suggest a pull request. Repeat open follow-ups in this final message.
+6. **Summary.** Tell the user:
+   - What changed, slice by slice, and how it was verified.
+   - The review findings not fixed: P3 defects, improvements, and open questions.
+   - The tasks you could not do, and what you need from the user to do them.
+   - The next steps for this environment, such as pushing the branch, opening a pull request, deploying, running a migration, or manual testing.

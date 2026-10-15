@@ -27,11 +27,14 @@ See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking g
 
 A **seam** is the public boundary you test at: the interface where you observe behavior without reaching inside. Tests live at seams, never against internals.
 
-**Test only at pre-agreed seams.** Before writing any test, write down the seams under test and confirm them with the user. No test is written at an unconfirmed seam. You can't test everything — agreeing the seams up front is how testing effort lands on the critical paths and complex logic instead of every edge case.
+Before writing any test, name the seams under test. You can't test everything: picking the seams up front puts testing effort on the critical paths and complex logic instead of every edge case. Ask: "What's the public interface, and which seams carry the risk?"
 
-Ask: "What's the public interface, and which seams should we test?"
+## Fixing a bug
 
-When the shape of that interface is itself in question — how deep the module is, where the seam belongs, what the interface should expose — use the `/codebase-design` skill for the vocabulary. It is the shared source of the module, interface, depth, seam, adapter, leverage and locality terms, and it is a reference to consult, not a session to run.
+1. Reproduce the bug and state the intended behavior, the current behavior, and the smallest observable reproduction.
+2. Write the smallest regression test, at the closest existing seam, that would have caught the bug. It encodes intended behavior, not the current implementation.
+3. Run the loop below. If the bug is flaky, make the test deterministic and note which signal it locks down.
+4. If the bug exposes a broader class of failures, land the focused regression test first, then add sibling coverage.
 
 ## Anti-patterns
 
@@ -41,6 +44,21 @@ When the shape of that interface is itself in question — how deep the module i
 
 ## Rules of the loop
 
-- **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features. When child Bash is denied, have the orchestrator run RED/GREEN commands between phases and attribute the resulting evidence; see `~/.pi/agent/GUARDRAILS.md`.
+- **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
+- **Red for the right reason.** Run the new test before changing production code and read the failure. It must fail because the behavior is missing or wrong, not because of an import error, a typo, or a broken fixture. If it passes or fails for an unrelated reason, fix the test first.
+- **Green, then nearby.** After the change, rerun the new test and the tests around the code you touched.
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle.
-- **Refactoring is not part of the loop.** It belongs to the review stage (see the `review` skill), not the red → green implementation cycle.
+- **Tests encode intent.** Never change a test to match a wrong implementation. Weaken or delete an existing assertion only when the intended behavior has changed, and say why.
+- **Refactor only on green.** Refactor once the tests pass, never inside a red → green step.
+
+## When a failing test is impractical
+
+Prefer no new test over a bad one: a test that mostly exercises mocks, encodes implementation details, depends on timing or global state, or needs expensive infrastructure for a small change. In that case, use the closest executable check instead (a targeted script, a reproduction command, browser automation, or a log assertion), and tell the user why you skipped the test and what you ran instead.
+
+## Report the evidence
+
+End with evidence, not just the outcome:
+
+- The failing-before test or check, and the failure it produced.
+- The passing-after run, and any nearby tests run.
+- Any gap: where failing-before evidence could not be shown, why, and which check replaced it.
