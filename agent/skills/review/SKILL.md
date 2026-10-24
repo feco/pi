@@ -8,6 +8,8 @@ argument-hint: "[commit | base..head | staged | working] [optional requirements/
 
 Review only repository data already present on disk. Find concrete issues that the author would reasonably fix; do not produce a generic audit or style commentary.
 
+Finding nothing is a valid result. Never stretch a weak candidate into a finding to fill a pass or the report: an empty pass or an empty report is better than a false finding.
+
 The review runs as one context pass, then one narrow pass per category, then one merge pass. A single focus per pass finds more than a scan for everything at once.
 
 ## Related skills
